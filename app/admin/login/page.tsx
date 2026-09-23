@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
 export default function AdminLoginPage() {
@@ -9,25 +10,46 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedPassword = password.trim().toLowerCase();
+    try {
+      const supabase = createClient();
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedPassword = password.trim();
 
-    // Single admin credential verification with case-insensitive input handling.
-    if (normalizedEmail === 'admin@lavenderspot.com' && normalizedPassword === 'admin123') {
-      localStorage.setItem(
-        'lavender_spot_admin_session',
-        JSON.stringify({ email: normalizedEmail, is_admin: true, logged_at: new Date().toISOString() })
-      );
-      window.location.href = '/admin/dashboard';
-      return;
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: normalizedPassword,
+      });
+
+      if (signInError || !authData.user) {
+        setError('Invalid administrator credentials.');
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError || !profile || !profile.is_admin) {
+        await supabase.auth.signOut();
+        setError('This account is not authorized for admin access.');
+        return;
+      }
+
+      router.replace('/admin/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Unable to sign in to admin portal.');
+    } finally {
+      setLoading(false);
     }
-
-    setError('Invalid administrator credentials.');
   };
 
   return (
@@ -59,7 +81,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@lavenderspot.com"
+                placeholder="admin@email.com"
                 className="w-full pl-10 pr-4 py-2.5 text-xs border border-line rounded bg-white"
               />
             </div>
@@ -82,9 +104,10 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-charcoal text-white text-xs font-semibold uppercase tracking-widest rounded hover:bg-lavender-700 transition-colors shadow"
+            disabled={loading}
+            className="w-full py-3.5 bg-charcoal text-white text-xs font-semibold uppercase tracking-widest rounded hover:bg-lavender-700 transition-colors shadow disabled:opacity-60"
           >
-            Access Admin Portal
+            {loading ? 'Checking Access...' : 'Access Admin Portal'}
           </button>
         </form>
 

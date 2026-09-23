@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import {
   LayoutDashboard,
   Package,
@@ -23,21 +24,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    if (pathname === '/admin/login') {
-      setAuthorized(true);
-      return;
-    }
-
-    try {
-      const adminSession = localStorage.getItem('lavender_spot_admin_session');
-      if (!adminSession) {
-        window.location.href = '/admin/login';
-      } else {
+    const verifyAdminAccess = async () => {
+      if (pathname === '/admin/login') {
         setAuthorized(true);
+        return;
       }
-    } catch (e) {
-      window.location.href = '/admin/login';
-    }
+
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          router.replace('/admin/login');
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile || !profile.is_admin) {
+          await supabase.auth.signOut();
+          router.replace('/admin/login');
+          return;
+        }
+
+        setAuthorized(true);
+      } catch (e) {
+        router.replace('/admin/login');
+      }
+    };
+
+    verifyAdminAccess();
   }, [pathname, router]);
 
   if (pathname === '/admin/login') {
@@ -52,9 +72,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  const handleAdminLogout = () => {
-    localStorage.removeItem('lavender_spot_admin_session');
-    window.location.href = '/admin/login';
+  const handleAdminLogout = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (e) {
+      // ignore signout errors and continue to redirect
+    }
+    router.replace('/admin/login');
   };
 
   const navItems = [
