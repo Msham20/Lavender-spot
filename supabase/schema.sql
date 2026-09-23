@@ -152,6 +152,33 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Drop existing policies before re-creating them to support re-runs.
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Categories are viewable by everyone" ON public.categories;
+DROP POLICY IF EXISTS "Admins can insert categories" ON public.categories;
+DROP POLICY IF EXISTS "Admins can update categories" ON public.categories;
+DROP POLICY IF EXISTS "Admins can delete categories" ON public.categories;
+DROP POLICY IF EXISTS "Active products are viewable by everyone" ON public.products;
+DROP POLICY IF EXISTS "Admins can insert products" ON public.products;
+DROP POLICY IF EXISTS "Admins can update products" ON public.products;
+DROP POLICY IF EXISTS "Admins can delete products" ON public.products;
+DROP POLICY IF EXISTS "Product images viewable by everyone" ON public.product_images;
+DROP POLICY IF EXISTS "Admins manage product images" ON public.product_images;
+DROP POLICY IF EXISTS "Users manage own wishlist" ON public.wishlist;
+DROP POLICY IF EXISTS "Users manage own cart" ON public.cart_items;
+DROP POLICY IF EXISTS "Users manage own addresses" ON public.addresses;
+DROP POLICY IF EXISTS "Users view own orders" ON public.orders;
+DROP POLICY IF EXISTS "Users insert own orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins manage all orders" ON public.orders;
+DROP POLICY IF EXISTS "Users view own order items" ON public.order_items;
+DROP POLICY IF EXISTS "Users insert order items" ON public.order_items;
+DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Upload Access" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Update Access" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Delete Access" ON storage.objects;
+
 -- Profiles Policies
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id OR public.is_admin());
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
@@ -194,6 +221,7 @@ CREATE POLICY "Users view own order items" ON public.order_items FOR SELECT USIN
 CREATE POLICY "Users insert order items" ON public.order_items FOR INSERT WITH CHECK (true);
 
 -- Trigger for Profile Creation on Signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -203,12 +231,15 @@ BEGIN
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
     COALESCE((new.raw_user_meta_data->>'is_admin')::boolean, false)
-  );
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET name = EXCLUDED.name,
+      email = EXCLUDED.email,
+      updated_at = now();
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
