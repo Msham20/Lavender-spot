@@ -53,11 +53,21 @@ export default function HomePage() {
         </div>
 
         {/* Hero Right Visual Box */}
-        <div className="relative h-60 sm:h-96 lg:h-full w-full bg-gradient-to-br from-lavender-200 via-lavender-300 to-lavender-700 flex items-center justify-center overflow-hidden py-10 lg:py-0">
-          <span className="font-serif text-4xl sm:text-7xl text-white/90 select-none tracking-widest drop-shadow-sm">
-            Lavender Spot
-          </span>
-          <div className="hidden sm:flex absolute bottom-12 left-12 bg-white px-5 py-3.5 rounded-md shadow-xl gap-3 items-center max-w-xs">
+        <div className="relative h-60 sm:h-96 lg:h-full w-full overflow-hidden py-10 lg:py-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, rgba(110, 88, 145, 0.58), rgba(74, 58, 93, 0.72)), url('https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80')",
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-lavender-200/30 via-transparent to-lavender-900/40" />
+          <div className="relative z-10 flex h-full items-center justify-center">
+            <span className="font-serif text-4xl sm:text-7xl text-white/90 select-none tracking-widest drop-shadow-sm">
+              Lavender Spot
+            </span>
+          </div>
+          <div className="hidden sm:flex absolute bottom-12 left-12 bg-white/90 backdrop-blur-sm px-5 py-3.5 rounded-md shadow-xl gap-3 items-center max-w-xs z-10">
             <div className="w-8 h-8 rounded-full bg-lavender-100 flex items-center justify-center text-lavender-700 font-serif font-bold text-sm">
               ★
             </div>
@@ -92,9 +102,16 @@ export default function HomePage() {
               className="group relative aspect-[3/4] rounded-md overflow-hidden bg-beige shadow-sm"
             >
               <div
-                className="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
+                className="absolute inset-0 transition-transform duration-500 group-hover:scale-105 bg-cover bg-center"
                 style={{
-                  background: `linear-gradient(${120 + idx * 30}deg, #EBE3F5, #8E7AB5)`,
+                  backgroundImage: `linear-gradient(${120 + idx * 30}deg, rgba(110,94,150,0.45), rgba(74,58,93,0.7)), url('${[
+                    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1526045478516-99145907023c?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80',
+                    'https://images.unsplash.com/photo-1521590832167-7ae3c3d9d5f6?auto=format&fit=crop&w=800&q=80',
+                  ][idx % 6]}')`,
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 via-transparent to-transparent z-10" />
@@ -131,7 +148,14 @@ export default function HomePage() {
 
       {/* Skin First Promo Banner */}
       <section className="max-w-[1320px] mx-auto px-5 lg:px-10">
-        <div className="relative min-h-[380px] rounded-md overflow-hidden bg-gradient-to-r from-lavender-700 via-lavender-800 to-charcoal flex items-center p-8 sm:p-16 text-white shadow-lg">
+        <div className="relative min-h-[380px] rounded-md overflow-hidden flex items-center p-8 sm:p-16 text-white shadow-lg">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, rgba(107,83,140,0.82), rgba(41,29,54,0.75)), url('https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=1200&q=80')",
+            }}
+          />
           <div className="relative z-10 max-w-lg space-y-4">
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-lavender-200">
               Skin First
@@ -222,8 +246,15 @@ export default function HomePage() {
       {/* Brand Story / Philosophy */}
       <section className="bg-white py-16">
         <div className="max-w-[1320px] mx-auto px-5 lg:px-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="relative h-80 sm:h-96 rounded-md overflow-hidden bg-gradient-to-br from-lavender-100 via-lavender-300 to-lavender-600 flex items-center justify-center text-white font-serif text-3xl">
-            Lavender Spot Philosophy
+          <div className="relative h-80 sm:h-96 rounded-md overflow-hidden flex items-center justify-center font-serif text-3xl shadow-sm">
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, rgba(236,223,244,0.65), rgba(142,122,181,0.8)), url('https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80')",
+              }}
+            />
+            <span className="relative z-10 text-white drop-shadow-sm">Lavender Spot Philosophy</span>
           </div>
 
           <div className="space-y-5">
