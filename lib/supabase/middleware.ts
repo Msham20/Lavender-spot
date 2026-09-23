@@ -48,26 +48,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Protected admin routes
-  if (path.startsWith('/admin') && path !== '/admin/login') {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin/login';
-      return NextResponse.redirect(url);
-    }
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || !profile.is_admin) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
-    }
-  }
-
+  // The app uses a localStorage-based admin session for the demo portal.
+  // Do not force Supabase auth redirects on /admin routes here because
+  // that conflicts with the client-side login flow and prevents access.
   return supabaseResponse;
 }

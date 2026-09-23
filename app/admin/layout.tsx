@@ -31,12 +31,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     try {
       const adminSession = localStorage.getItem('lavender_spot_admin_session');
       if (!adminSession) {
-        router.push('/admin/login');
+        window.location.href = '/admin/login';
       } else {
         setAuthorized(true);
       }
     } catch (e) {
-      router.push('/admin/login');
+      window.location.href = '/admin/login';
     }
   }, [pathname, router]);
 
@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleAdminLogout = () => {
     localStorage.removeItem('lavender_spot_admin_session');
-    router.push('/admin/login');
+    window.location.href = '/admin/login';
   };
 
   const navItems = [

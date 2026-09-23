@@ -14,19 +14,20 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError(null);
 
-    // Single Admin Credential Verification
-    if (
-      (email === 'admin@lavenderspot.com' && password === 'admin123') ||
-      (email && password.length >= 6)
-    ) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim().toLowerCase();
+
+    // Single admin credential verification with case-insensitive input handling.
+    if (normalizedEmail === 'admin@lavenderspot.com' && normalizedPassword === 'admin123') {
       localStorage.setItem(
         'lavender_spot_admin_session',
-        JSON.stringify({ email, is_admin: true, logged_at: new Date().toISOString() })
+        JSON.stringify({ email: normalizedEmail, is_admin: true, logged_at: new Date().toISOString() })
       );
-      router.push('/admin/dashboard');
-    } else {
-      setError('Invalid administrator credentials.');
+      window.location.href = '/admin/dashboard';
+      return;
     }
+
+    setError('Invalid administrator credentials.');
   };
 
   return (
@@ -88,7 +89,7 @@ export default function AdminLoginPage() {
         </form>
 
         <p className="text-[11px] text-charcoal-muted text-center">
-          Default Admin Login: <strong>admin@lavenderspot.com</strong> / <strong>admin123</strong>
+          Restricted access for authorized administrators only.
         </p>
       </div>
     </div>
