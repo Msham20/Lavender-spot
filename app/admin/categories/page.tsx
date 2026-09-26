@@ -1,35 +1,73 @@
 'use client';
 
-import React, { useState } from 'react';
-import { INITIAL_CATEGORIES } from '@/lib/data/mock-seed';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '@/lib/store/cart-context';
-import { Plus, Edit2, Trash2, FolderTree } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { Plus, Trash2, FolderTree } from 'lucide-react';
 
 export default function AdminCategoriesPage() {
   const { products, showToast } = useCart();
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<any[]>([]);
   const [newCatName, setNewCatName] = useState('');
 
-  const handleAddCategory = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.from('categories').select('*').order('name');
+
+        if (error) {
+          console.error('Failed to load categories:', error);
+          return;
+        }
+
+        setCategories(data || []);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
 
-    const newCat = {
-      id: 'cat-' + Date.now(),
-      name: newCatName.trim(),
-      slug: newCatName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      image_url: '/categories/default.jpg',
-    };
+    try {
+      const supabase = createClient();
+      const categoryName = newCatName.trim();
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ name: categoryName, slug: categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-') }])
+        .select()
+        .single();
 
-    setCategories([...categories, newCat]);
-    showToast(`Category "${newCatName}" added.`);
-    setNewCatName('');
+      if (error) throw error;
+
+      setCategories((prev) => [...prev, data]);
+      showToast(`Category "${categoryName}" added.`);
+      setNewCatName('');
+    } catch (error: any) {
+      console.error('Failed to add category:', error);
+      showToast(error?.message || 'Categorie could not be added.');
+    }
   };
 
-  const handleDeleteCategory = (id: string, name: string) => {
+  const handleDeleteCategory = async (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete category "${name}"?`)) {
-      setCategories(categories.filter((c) => c.id !== id));
-      showToast(`Category "${name}" deleted.`);
+      try {
+        const supabase = createClient();
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+
+        if (error) throw error;
+
+        setCategories((prev) => prev.filter((c) => c.id !== id));
+        showToast(`Category "${name}" deleted.`);
+      } catch (error: any) {
+        console.error('Failed to delete category:', error);
+        showToast(error?.message || 'Category could not be deleted.');
+      }
     }
   };
 

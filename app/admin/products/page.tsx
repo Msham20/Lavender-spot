@@ -3,16 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { useCart } from '@/lib/store/cart-context';
 import { Product } from '@/types/database';
-import { INITIAL_CATEGORIES } from '@/lib/data/mock-seed';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, Edit2, Trash2, X, Search, CheckCircle, Upload, Image as ImageIcon, Star } from 'lucide-react';
-
-const categoryLookup = Object.fromEntries(INITIAL_CATEGORIES.map((category) => [category.id, category.name]));
 
 export default function AdminProductsPage() {
   const { products, showToast } = useCart();
 
   const [productList, setProductList] = useState<Product[]>(products);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -31,6 +29,26 @@ export default function AdminProductsPage() {
 
   const [productImages, setProductImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string>('');
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.from('categories').select('*').order('name');
+
+        if (error) {
+          console.error('Failed to load categories:', error);
+          return;
+        }
+
+        setCategories(data || []);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -139,7 +157,7 @@ export default function AdminProductsPage() {
             price: Number(product.price),
             discount_price: product.discount_price ? Number(product.discount_price) : null,
             category_id: product.category_id,
-            category_name: product.category_id ? categoryLookup[product.category_id] || 'Skincare' : 'Skincare',
+            category_name: product.category_id ? (categories.find((cat) => cat.id === product.category_id)?.name || 'General') : 'General',
             skin_type: product.skin_type || 'All Skin Types',
             stock: Number(product.stock || 0),
             status: product.status || 'active',
@@ -174,7 +192,7 @@ export default function AdminProductsPage() {
       description: '',
       price: '',
       discount_price: '',
-      category_name: 'Skincare',
+      category_name: categories[0]?.name || '',
       skin_type: 'All Skin Types',
       stock: '20',
       status: 'active',
@@ -192,7 +210,7 @@ export default function AdminProductsPage() {
       description: p.description,
       price: p.price.toString(),
       discount_price: p.discount_price ? p.discount_price.toString() : '',
-      category_name: p.category_name || 'Skincare',
+      category_name: p.category_name || categories[0]?.name || '',
       skin_type: p.skin_type || 'All Skin Types',
       stock: p.stock.toString(),
       status: p.status,
@@ -222,7 +240,7 @@ export default function AdminProductsPage() {
     try {
       const supabase = createClient();
       const finalPrimaryImage = primaryImage || productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
-      const selectedCategory = INITIAL_CATEGORIES.find((category) => category.name === formData.category_name);
+      const selectedCategory = categories.find((category) => category.name === formData.category_name);
 
       const productPayload = {
         name: formData.name,
@@ -613,11 +631,15 @@ export default function AdminProductsPage() {
                     onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
                     className="w-full px-3 py-2 border border-line rounded bg-white"
                   >
-                    {INITIAL_CATEGORIES.map((cat) => (
-                      <option key={cat.id} value={cat.name}>
-                        {cat.name}
-                      </option>
-                    ))}
+                    {categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <option key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No categories available</option>
+                    )}
                   </select>
                 </div>
                 <div>

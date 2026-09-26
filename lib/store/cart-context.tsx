@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { CartItem, Product } from '@/types/database';
-import { INITIAL_PRODUCTS } from '@/lib/data/mock-seed';
+import { createClient } from '@/lib/supabase/client';
 
 interface CartContextType {
   cart: CartItem[];
@@ -29,19 +29,84 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
-  const [products] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const loadProductsFromDatabase = async () => {
+      try {
+        const supabase = createClient();
+        const [{ data: productRows, error: productError }, { data: categoryRows }] = await Promise.all([
+          supabase.from('products').select('*').order('created_at', { ascending: false }),
+          supabase.from('categories').select('*'),
+        ]);
+
+        if (productError) {
+          console.error('Failed to load products from database:', productError);
+          setProducts([]);
+          return;
+        }
+
+        const categoryMap = new Map((categoryRows || []).map((category) => [category.id, category.name]));
+        const { data: imageRows } = await supabase.from('product_images').select('*');
+        const imageMap = new Map<string, string[]>();
+
+        (imageRows || []).forEach((image) => {
+          const current = imageMap.get(image.product_id) || [];
+          current.push(image.image_url);
+          imageMap.set(image.product_id, current);
+        });
+
+        const mappedProducts: Product[] = (productRows || []).map((product) => {
+          const productImages = imageMap.get(product.id) || [];
+          const primaryImage = productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
+
+          return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            description: product.description || '',
+            price: Number(product.price),
+            discount_price: product.discount_price ? Number(product.discount_price) : null,
+            category_id: product.category_id,
+            category_name: product.category_id ? categoryMap.get(product.category_id) || 'General' : 'General',
+            skin_type: product.skin_type || 'All Skin Types',
+            stock: Number(product.stock || 0),
+            status: product.status || 'active',
+            is_bestseller: Boolean(product.is_bestseller),
+            is_new_arrival: Boolean(product.is_new_arrival),
+            rating: Number(product.rating || 4.8),
+            review_count: Number(product.review_count || 0),
+            primary_image: primaryImage,
+            images: productImages.map((imageUrl, index) => ({
+              id: `${product.id}-img-${index}`,
+              product_id: product.id,
+              image_url: imageUrl,
+              is_primary: imageUrl === primaryImage,
+              display_order: index,
+            })),
+          };
+        });
+
+        setProducts(mappedProducts);
+      } catch (e) {
+        console.error('Error loading database products:', e);
+        setProducts([]);
+      }
+    };
+
+    loadProductsFromDatabase();
+  }, []);
 
   useEffect(() => {
     try {
       const storedCart = localStorage.getItem(CART_KEY);
       if (storedCart) {
         const parsed = JSON.parse(storedCart);
-        // Hydrate product objects
         const hydrated = parsed.map((item: any) => {
-          const product = products.find((p) => p.id === item.product_id) || products[0];
+          const product = products.find((p) => p.id === item.product_id) || null;
           return { ...item, product };
         });
-        setCart(hydrated);
+        setCart(hydrated.filter((item: any) => item.product));
       }
 
       const storedWish = localStorage.getItem(WISH_KEY);

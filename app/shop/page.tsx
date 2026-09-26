@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import { useCart } from '@/lib/store/cart-context';
-import { INITIAL_CATEGORIES } from '@/lib/data/mock-seed';
 import { Filter, SlidersHorizontal } from 'lucide-react';
 
 function ShopContent() {
@@ -35,6 +34,11 @@ function ShopContent() {
 
   const searchQuery = searchParams.get('q') || '';
   const filterParam = searchParams.get('filter');
+
+  const categories = useMemo(
+    () => Array.from(new Set(products.map((p) => p.category_name).filter((name): name is string => Boolean(name)))).sort(),
+    [products]
+  );
 
   const skinTypes = useMemo(() => {
     const set = new Set<string>();
@@ -228,17 +232,21 @@ function ShopContent() {
           <div>
             <h3 className="text-[11.5px] uppercase tracking-wider font-semibold text-charcoal mb-3">Category</h3>
             <div className="space-y-2">
-              {INITIAL_CATEGORIES.map((cat) => (
-                <label key={cat.id} className="flex items-center gap-2 text-xs text-charcoal-soft cursor-pointer hover:text-charcoal py-0.5">
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(cat.name)}
-                    onChange={() => toggleCategory(cat.name)}
-                    className="rounded accent-lavender-700 w-4 h-4"
-                  />
-                  <span>{cat.name}</span>
-                </label>
-              ))}
+              {categories.length > 0 ? (
+                categories.map((cat) => (
+                  <label key={cat} className="flex items-center gap-2 text-xs text-charcoal-soft cursor-pointer hover:text-charcoal py-0.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(cat)}
+                      onChange={() => toggleCategory(cat)}
+                      className="rounded accent-lavender-700 w-4 h-4"
+                    />
+                    <span>{cat}</span>
+                  </label>
+                ))
+              ) : (
+                <p className="text-xs text-charcoal-muted">No categories available yet.</p>
+              )}
             </div>
           </div>
 
