@@ -1,0 +1,169 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
+}
+
+model Profile {
+  id         String   @id @db.Uuid
+  name       String?
+  email      String?  @unique
+  phone      String?
+  is_admin   Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  @@map("profiles")
+  @@schema("public")
+}
+
+model Category {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  slug       String    @unique
+  image_url  String?
+  created_at DateTime  @default(now()) @db.Timestamptz
+  updated_at DateTime  @updatedAt @db.Timestamptz
+  products   Product[]
+
+  @@map("categories")
+  @@schema("public")
+}
+
+model Product {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  slug           String         @unique
+  description    String?
+  price          Decimal        @db.Decimal(10, 2)
+  discount_price Decimal?       @db.Decimal(10, 2)
+  category_id    String?        @db.Uuid
+  skin_type      String?        @default("All Skin Types")
+  stock          Int            @default(0)
+  status         String         @default("active")
+  is_bestseller  Boolean        @default(false)
+  is_new_arrival Boolean        @default(false)
+  rating         Decimal        @default(4.5) @db.Decimal(3, 2)
+  review_count   Int            @default(0)
+  created_at     DateTime       @default(now()) @db.Timestamptz
+  updated_at     DateTime       @updatedAt @db.Timestamptz
+
+  category   Category?      @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  images     ProductImage[]
+  wishlist   Wishlist[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("products")
+  @@schema("public")
+}
+
+model ProductImage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id    String   @db.Uuid
+  image_url     String
+  is_primary    Boolean  @default(false)
+  display_order Int      @default(0)
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+  @@schema("public")
+}
+
+model Wishlist {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id], name: "unique_user_product_wishlist")
+  @@map("wishlist")
+  @@schema("public")
+}
+
+model CartItem {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  product_id String   @db.Uuid
+  size       String   @default("One Size")
+  quantity   Int      @default(1)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_id, size], name: "unique_user_product_size_cart")
+  @@map("cart_items")
+  @@schema("public")
+}
+
+model Address {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  name       String
+  phone      String
+  address    String
+  city       String
+  state      String
+  pincode    String
+  is_default Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  @@map("addresses")
+  @@schema("public")
+}
+
+model Order {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_number    String      @unique
+  user_id         String?     @db.Uuid
+  subtotal        Decimal     @db.Decimal(10, 2)
+  delivery_charge Decimal?    @default(0) @db.Decimal(10, 2)
+  discount_amount Decimal?    @default(0) @db.Decimal(10, 2)
+  total_amount    Decimal     @db.Decimal(10, 2)
+  status          String      @default("Pending")
+  payment_method  String      @default("UPI")
+  payment_status  String      @default("Completed")
+  shipping_name   String
+  shipping_phone  String
+  shipping_address String
+  shipping_city   String
+  shipping_state  String
+  shipping_pincode String
+  created_at      DateTime    @default(now()) @db.Timestamptz
+  updated_at      DateTime    @updatedAt @db.Timestamptz
+
+  items OrderItem[]
+
+  @@map("orders")
+  @@schema("public")
+}
+
+model OrderItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id    String   @db.Uuid
+  product_id  String?  @db.Uuid
+  product_name String
+  size        String   @default("One Size")
+  quantity    Int
+  unit_price  Decimal  @db.Decimal(10, 2)
+  total_price Decimal  @db.Decimal(10, 2)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  order   Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [product_id], references: [id], onDelete: SetNull)
+
+  @@map("order_items")
+  @@schema("public")
+}
