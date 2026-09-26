@@ -3,7 +3,6 @@ import type { Metadata } from 'next';
 import { CartProvider } from '@/lib/store/cart-context';
 import AnnouncementBar from '@/components/AnnouncementBar';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import Toast from '@/components/Toast';
 
@@ -31,7 +30,6 @@ export default function RootLayout({
           <AnnouncementBar />
           <Header />
           <main className="min-h-screen pb-16 md:pb-0">{children}</main>
-          <Footer />
           <MobileBottomNav />
           <Toast />
         </CartProvider>
