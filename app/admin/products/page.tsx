@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Plus, Edit2, Trash2, X, Search, CheckCircle, Upload, Image as ImageIcon, Star } from 'lucide-react';
 
 export default function AdminProductsPage() {
-  const { products, showToast } = useCart();
+  const { products, showToast, refreshProducts } = useCart();
 
   const [productList, setProductList] = useState<Product[]>(products);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -341,6 +341,7 @@ export default function AdminProductsPage() {
           ];
 
       setProductList(updatedProducts);
+      await refreshProducts();
       showToast(editingProduct ? `Product "${formData.name}" updated successfully.` : `New Product "${formData.name}" created!`);
       setIsModalOpen(false);
     } catch (error: any) {
