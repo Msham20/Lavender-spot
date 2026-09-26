@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCart } from '@/lib/store/cart-context';
 import { Product } from '@/types/database';
 import { INITIAL_CATEGORIES } from '@/lib/data/mock-seed';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, Edit2, Trash2, X, Search, CheckCircle, Upload, Image as ImageIcon, Star } from 'lucide-react';
+
+const categoryLookup = Object.fromEntries(INITIAL_CATEGORIES.map((category) => [category.id, category.name]));
 
 export default function AdminProductsPage() {
   const { products, showToast } = useCart();
@@ -97,6 +99,74 @@ export default function AdminProductsPage() {
       p.category_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  useEffect(() => {
+    const loadProductsFromDatabase = async () => {
+      try {
+        const supabase = createClient();
+        const { data: productRows, error: productError } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (productError) {
+          console.error('Failed to load products from database:', productError);
+          return;
+        }
+
+        if (!productRows || productRows.length === 0) {
+          setProductList(products);
+          return;
+        }
+
+        const { data: imageRows } = await supabase.from('product_images').select('*');
+        const imageMap = new Map<string, string[]>();
+
+        (imageRows || []).forEach((image) => {
+          const current = imageMap.get(image.product_id) || [];
+          current.push(image.image_url);
+          imageMap.set(image.product_id, current);
+        });
+
+        const mappedProducts: Product[] = productRows.map((product) => {
+          const productImagesForDb = imageMap.get(product.id) || [];
+          const primaryImageUrl = productImagesForDb[0] || product.primary_image || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
+
+          return {
+            id: product.id,
+            name: product.name,
+            slug: product.slug,
+            description: product.description || '',
+            price: Number(product.price),
+            discount_price: product.discount_price ? Number(product.discount_price) : null,
+            category_id: product.category_id,
+            category_name: product.category_id ? categoryLookup[product.category_id] || 'Skincare' : 'Skincare',
+            skin_type: product.skin_type || 'All Skin Types',
+            stock: Number(product.stock || 0),
+            status: product.status || 'active',
+            is_bestseller: Boolean(product.is_bestseller),
+            is_new_arrival: Boolean(product.is_new_arrival),
+            rating: Number(product.rating || 4.8),
+            review_count: Number(product.review_count || 0),
+            primary_image: primaryImageUrl,
+            images: productImagesForDb.map((imageUrl, index) => ({
+              id: `${product.id}-img-${index}`,
+              product_id: product.id,
+              image_url: imageUrl,
+              is_primary: imageUrl === primaryImageUrl,
+              display_order: index,
+            })),
+          };
+        });
+
+        setProductList(mappedProducts);
+      } catch (error) {
+        console.error('Error loading products from Supabase:', error);
+      }
+    };
+
+    loadProductsFromDatabase();
+  }, [products]);
+
   const handleOpenAddModal = () => {
     setEditingProduct(null);
     setFormData({
@@ -141,7 +211,7 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.price || !formData.stock) {
@@ -149,63 +219,116 @@ export default function AdminProductsPage() {
       return;
     }
 
-    const finalPrimaryImage = primaryImage || productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
-    const finalImagesObj = productImages.map((img, i) => ({
-      id: `img-${i}-${Date.now()}`,
-      product_id: editingProduct ? editingProduct.id : '',
-      image_url: img,
-      is_primary: img === finalPrimaryImage,
-      display_order: i,
-    }));
+    try {
+      const supabase = createClient();
+      const finalPrimaryImage = primaryImage || productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
+      const selectedCategory = INITIAL_CATEGORIES.find((category) => category.name === formData.category_name);
 
-    if (editingProduct) {
-      // Update
-      const updated = productList.map((p) => {
-        if (p.id === editingProduct.id) {
-          return {
-            ...p,
-            name: formData.name,
-            slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            description: formData.description,
-            price: parseFloat(formData.price),
-            discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
-            category_name: formData.category_name,
-            skin_type: formData.skin_type,
-            stock: parseInt(formData.stock, 10),
-            status: formData.status as 'active' | 'draft',
-            primary_image: finalPrimaryImage,
-            images: finalImagesObj,
-          };
-        }
-        return p;
-      });
-      setProductList(updated);
-      showToast(`Product "${formData.name}" updated successfully.`);
-    } else {
-      // Create
-      const newProd: Product = {
-        id: 'prod-' + Date.now(),
+      const productPayload = {
         name: formData.name,
         slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: formData.description,
-        price: parseFloat(formData.price),
-        discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
-        category_name: formData.category_name,
+        price: Number(formData.price),
+        discount_price: formData.discount_price ? Number(formData.discount_price) : null,
+        category_id: selectedCategory?.id || null,
         skin_type: formData.skin_type,
-        stock: parseInt(formData.stock, 10),
-        status: formData.status as 'active' | 'draft',
-        rating: 4.8,
-        review_count: 1,
+        stock: Number(formData.stock),
+        status: formData.status,
         is_bestseller: false,
         is_new_arrival: true,
-        primary_image: finalPrimaryImage,
-        images: finalImagesObj,
+        rating: editingProduct?.rating ?? 4.8,
+        review_count: editingProduct?.review_count ?? 1,
       };
-      setProductList([newProd, ...productList]);
-      showToast(`New Product "${formData.name}" created!`);
-    }
 
-    setIsModalOpen(false);
+      let savedProductId = editingProduct?.id;
+
+      if (editingProduct) {
+        const { error } = await supabase.from('products').update(productPayload).eq('id', editingProduct.id);
+        if (error) throw error;
+
+        await supabase.from('product_images').delete().eq('product_id', editingProduct.id);
+      } else {
+        const { data, error } = await supabase.from('products').insert([productPayload]).select().single();
+        if (error) throw error;
+        savedProductId = data.id;
+      }
+
+      if (!savedProductId) {
+        throw new Error('Product was not saved correctly to the database.');
+      }
+
+      const imageRows = productImages.map((imgUrl, index) => ({
+        product_id: savedProductId,
+        image_url: imgUrl,
+        is_primary: imgUrl === finalPrimaryImage,
+        display_order: index,
+      }));
+
+      if (imageRows.length > 0) {
+        const { error: imageError } = await supabase.from('product_images').insert(imageRows);
+        if (imageError) throw imageError;
+      }
+
+      const updatedProducts = editingProduct
+        ? productList.map((p) => {
+            if (p.id === editingProduct.id) {
+              return {
+                ...p,
+                name: formData.name,
+                slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                description: formData.description,
+                price: Number(formData.price),
+                discount_price: formData.discount_price ? Number(formData.discount_price) : null,
+                category_name: formData.category_name,
+                skin_type: formData.skin_type,
+                stock: Number(formData.stock),
+                status: formData.status as 'active' | 'draft',
+                primary_image: finalPrimaryImage,
+                images: imageRows.map((image, index) => ({
+                  id: `${editingProduct.id}-img-${index}`,
+                  product_id: editingProduct.id,
+                  image_url: image.image_url,
+                  is_primary: image.is_primary,
+                  display_order: image.display_order,
+                })),
+              };
+            }
+            return p;
+          })
+        : [
+            {
+              id: savedProductId,
+              name: formData.name,
+              slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+              description: formData.description,
+              price: Number(formData.price),
+              discount_price: formData.discount_price ? Number(formData.discount_price) : null,
+              category_name: formData.category_name,
+              skin_type: formData.skin_type,
+              stock: Number(formData.stock),
+              status: formData.status as 'active' | 'draft',
+              rating: 4.8,
+              review_count: 1,
+              is_bestseller: false,
+              is_new_arrival: true,
+              primary_image: finalPrimaryImage,
+              images: imageRows.map((image, index) => ({
+                id: `${savedProductId}-img-${index}`,
+                product_id: savedProductId,
+                image_url: image.image_url,
+                is_primary: image.is_primary,
+                display_order: image.display_order,
+              })),
+            }, ...productList,
+          ];
+
+      setProductList(updatedProducts);
+      showToast(editingProduct ? `Product "${formData.name}" updated successfully.` : `New Product "${formData.name}" created!`);
+      setIsModalOpen(false);
+    } catch (error: any) {
+      console.error('Failed to save product:', error);
+      showToast(error?.message || 'Failed to save product. Check Supabase storage and table permissions.');
+    }
   };
 
   return (
