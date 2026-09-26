@@ -5,6 +5,54 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@lavender-spot.com')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
+async function ensureAdminProfile(
+  supabase: ReturnType<typeof createClient>,
+  user: { id: string; email?: string | null; user_metadata?: Record<string, any> | null }
+) {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, is_admin, name, email')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (profile?.is_admin) {
+    return true;
+  }
+
+  if (profileError && profileError.code !== 'PGRST116') {
+    return false;
+  }
+
+  const isAllowedAdmin =
+    !!user.user_metadata?.is_admin ||
+    !!user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+
+  if (!isAllowedAdmin) {
+    return false;
+  }
+
+  const { error: upsertError } = await supabase.from('profiles').upsert(
+    {
+      id: user.id,
+      email: user.email,
+      name:
+        user.user_metadata?.name ||
+        (user.email ? user.email.split('@')[0] : 'Admin User') ||
+        'Admin User',
+      is_admin: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' }
+  );
+
+  return !upsertError;
+}
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -32,13 +80,9 @@ export default function AdminLoginPage() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', authData.user.id)
-        .single();
+      const isAuthorized = await ensureAdminProfile(supabase, authData.user);
 
-      if (profileError || !profile || !profile.is_admin) {
+      if (!isAuthorized) {
         await supabase.auth.signOut();
         setError('This account is not authorized for admin access.');
         return;
