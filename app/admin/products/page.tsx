@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useCart } from '@/lib/store/cart-context';
 import { Product } from '@/types/database';
 import { INITIAL_CATEGORIES } from '@/lib/data/mock-seed';
+import { createClient } from '@/lib/supabase/client';
 import { Plus, Edit2, Trash2, X, Search, CheckCircle, Upload, Image as ImageIcon, Star } from 'lucide-react';
 
 export default function AdminProductsPage() {
@@ -29,26 +30,41 @@ export default function AdminProductsPage() {
   const [productImages, setProductImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string>('');
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          const url = event.target.result as string;
-          setProductImages((prev) => {
-            const next = [...prev, url];
-            if (!primaryImage || primaryImage.startsWith('linear-gradient')) {
-              setPrimaryImage(url);
-            }
-            return next;
-          });
+    const supabase = createClient();
+
+    for (const file of Array.from(files)) {
+      try {
+        const fileExt = file.name.split('.').pop() || 'png';
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+        const { data, error } = await supabase.storage.from('product-images').upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+        if (error) {
+          throw error;
         }
-      };
-      reader.readAsDataURL(file);
-    });
+
+        const publicUrl = supabase.storage.from('product-images').getPublicUrl(data.path).data.publicUrl;
+
+        setProductImages((prev) => {
+          const next = [...prev, publicUrl];
+          if (!primaryImage || primaryImage.startsWith('linear-gradient')) {
+            setPrimaryImage(publicUrl);
+          }
+          return next;
+        });
+      } catch (error: any) {
+        console.error('Image upload failed:', error);
+        showToast(error?.message || 'Image upload failed. Please check Supabase storage permissions.');
+      }
+    }
+
     e.target.value = '';
   };
 
