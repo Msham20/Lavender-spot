@@ -241,13 +241,13 @@ export default function AdminProductsPage() {
     }
   };
 
-  const supportsHowToUseColumn = async (supabase: ReturnType<typeof createClient>) => {
+  const supportsProductColumn = async (supabase: ReturnType<typeof createClient>, column: 'ingredients' | 'how_to_use') => {
     try {
-      const { error } = await supabase.from('products').select('how_to_use').limit(1);
+      const { error } = await supabase.from('products').select(column).limit(1);
       return !error;
     } catch (error: any) {
       const message = String(error?.message || '').toLowerCase();
-      if (message.includes('how_to_use') && message.includes('does not exist')) {
+      if ((message.includes(`"${column}"`) || message.includes(`column \"${column}\"`)) && message.includes('does not exist')) {
         return false;
       }
       throw error;
@@ -266,7 +266,10 @@ export default function AdminProductsPage() {
       const supabase = createClient();
       const finalPrimaryImage = primaryImage || productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
       const selectedCategory = categories.find((category) => category.name === formData.category_name);
-      const hasHowToUseColumn = await supportsHowToUseColumn(supabase);
+      const [hasIngredientsColumn, hasHowToUseColumn] = await Promise.all([
+        supportsProductColumn(supabase, 'ingredients'),
+        supportsProductColumn(supabase, 'how_to_use'),
+      ]);
 
       const ingredientsList = formData.ingredients
         .split(/\n|,/)
@@ -277,7 +280,6 @@ export default function AdminProductsPage() {
         name: formData.name,
         slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: formData.description,
-        ingredients: ingredientsList,
         price: Number(formData.price),
         discount_price: formData.discount_price ? Number(formData.discount_price) : null,
         category_id: selectedCategory?.id || null,
@@ -289,6 +291,10 @@ export default function AdminProductsPage() {
         rating: editingProduct?.rating ?? 4.8,
         review_count: editingProduct?.review_count ?? 1,
       };
+
+      if (hasIngredientsColumn) {
+        productPayload.ingredients = ingredientsList;
+      }
 
       if (hasHowToUseColumn) {
         productPayload.how_to_use = formData.how_to_use.trim();
