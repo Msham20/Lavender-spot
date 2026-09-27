@@ -490,7 +490,7 @@ export default function AdminProductsPage() {
       {/* Add / Edit Product Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-charcoal/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-line rounded-md max-w-xl w-full p-6 space-y-6 shadow-2xl relative my-8">
+          <div className="bg-white border border-line rounded-md max-w-xl w-full p-6 space-y-6 shadow-2xl relative my-8 max-h-[calc(100vh-2rem)] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-line pb-3">
               <h2 className="text-xl font-serif text-charcoal">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
