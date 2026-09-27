@@ -14,26 +14,32 @@ export default function HomePage() {
     () => [
       {
         name: 'General',
+        href: '/shop',
         image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
       },
       {
         name: 'Skincare',
+        href: '/shop?category=Skincare',
         image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80',
       },
       {
         name: 'Face',
+        href: '/shop?category=Face',
         image: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=900&q=80',
       },
       {
         name: 'Hair Care',
+        href: '/shop?category=Hair%20Care',
         image: 'https://images.unsplash.com/photo-1521590832167-7ae3c3d9d5f6?auto=format&fit=crop&w=900&q=80',
       },
       {
         name: 'Body Care',
+        href: '/shop?category=Body%20Care',
         image: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80',
       },
       {
         name: 'Lips',
+        href: '/shop?category=Lips',
         image: 'https://images.unsplash.com/photo-1526045478516-99145907023c?auto=format&fit=crop&w=900&q=80',
       },
     ],
@@ -123,14 +129,14 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 xl:mt-10">
           {categoryCards.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-6 w-full max-w-[300px]">
+            <div className="grid grid-cols-1 gap-6 w-full xl:max-w-[calc(100%-18px)] xl:pl-0">
               {categoryCards.map((category) => (
                 <Link
                   key={category.name}
-                  href={`/shop?category=${encodeURIComponent(category.name)}`}
-                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm"
+                  href={category.href}
+                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm w-full max-w-[300px] xl:max-w-[300px]"
                 >
                   <div
                     className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03] bg-cover bg-center"
