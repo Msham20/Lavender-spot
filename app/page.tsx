@@ -30,7 +30,7 @@ export default function HomePage() {
       {
         name: 'Hair Care',
         href: '/shop?category=Hair%20Care',
-        image: 'https://images.unsplash.com/photo-1521590832167-7ae3c3d9d5f6?auto=format&fit=crop&w=900&q=80',
+        image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80',
       },
       {
         name: 'Body Care',
