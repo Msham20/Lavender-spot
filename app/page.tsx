@@ -136,7 +136,7 @@ export default function HomePage() {
                 <Link
                   key={category.name}
                   href={category.href}
-                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 snap-start w-[180px] sm:w-[200px] xl:w-[220px]"
+                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 snap-start w-[180px] sm:w-[200px] xl:w-[220px] transition-none"
                 >
                   <div
                     className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03] bg-cover bg-center"

@@ -71,7 +71,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             toggleWishlist(product.id);
           }}
           className={`absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all duration-200 ${
-            wished ? 'text-lavender-700 opacity-100' : 'text-charcoal opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
+            wished ? 'text-lavender-700 opacity-100' : 'text-charcoal opacity-100'
           }`}
           aria-label="Wishlist"
         >
