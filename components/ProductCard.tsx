@@ -66,16 +66,18 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Wishlist Button */}
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
-          className={`absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md ${
-            wished ? 'text-lavender-700 opacity-100' : 'text-charcoal opacity-100'
-          }`}
-          aria-label="Wishlist"
+          className="absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-md border border-[#e7e1ec]"
+          aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          title={wished ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart className={`w-3.5 h-3.5 ${wished ? 'fill-lavender-700 stroke-lavender-700' : ''}`} />
+          <Heart
+            className={`w-3.5 h-3.5 ${wished ? 'fill-lavender-700 stroke-lavender-700' : 'stroke-charcoal fill-none'}`}
+          />
         </button>
 
         {/* Quick Add / Out of Stock Button */}
