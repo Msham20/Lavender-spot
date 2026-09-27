@@ -24,6 +24,8 @@ export default function AdminProductsPage() {
     skin_type: 'All Skin Types',
     stock: '',
     status: 'active',
+    is_bestseller: false,
+    is_new_arrival: true,
     imageUrlInput: '',
   });
 
@@ -196,6 +198,8 @@ export default function AdminProductsPage() {
       skin_type: 'All Skin Types',
       stock: '20',
       status: 'active',
+      is_bestseller: false,
+      is_new_arrival: true,
       imageUrlInput: '',
     });
     setProductImages([]);
@@ -214,6 +218,8 @@ export default function AdminProductsPage() {
       skin_type: p.skin_type || 'All Skin Types',
       stock: p.stock.toString(),
       status: p.status,
+      is_bestseller: Boolean(p.is_bestseller),
+      is_new_arrival: Boolean(p.is_new_arrival),
       imageUrlInput: '',
     });
     const imgs = p.images ? p.images.map((i) => i.image_url) : p.primary_image ? [p.primary_image] : [];
@@ -252,8 +258,8 @@ export default function AdminProductsPage() {
         skin_type: formData.skin_type,
         stock: Number(formData.stock),
         status: formData.status,
-        is_bestseller: false,
-        is_new_arrival: true,
+        is_bestseller: Boolean(formData.is_bestseller),
+        is_new_arrival: Boolean(formData.is_new_arrival),
         rating: editingProduct?.rating ?? 4.8,
         review_count: editingProduct?.review_count ?? 1,
       };
@@ -429,9 +435,16 @@ export default function AdminProductsPage() {
                   </span>
                 </td>
                 <td className="p-3.5">
-                  <span className="capitalize px-2 py-0.5 rounded bg-lavender-100 text-lavender-800 text-[10.5px] font-semibold">
-                    {p.status}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="capitalize px-2 py-0.5 rounded bg-lavender-100 text-lavender-800 text-[10.5px] font-semibold">
+                      {p.status}
+                    </span>
+                    {p.is_bestseller && (
+                      <span className="px-2 py-0.5 rounded bg-charcoal text-white text-[10.5px] font-semibold">
+                        Best Seller
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="p-3.5 text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -654,6 +667,27 @@ export default function AdminProductsPage() {
                     className="w-full px-3 py-2 border border-line rounded bg-white"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 rounded border border-line bg-ivory px-3 py-2 text-charcoal-soft">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.is_bestseller)}
+                    onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
+                    className="h-4 w-4 accent-lavender-700"
+                  />
+                  <span className="font-semibold">Best Seller</span>
+                </label>
+                <label className="flex items-center gap-2 rounded border border-line bg-ivory px-3 py-2 text-charcoal-soft">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(formData.is_new_arrival)}
+                    onChange={(e) => setFormData({ ...formData, is_new_arrival: e.target.checked })}
+                    className="h-4 w-4 accent-lavender-700"
+                  />
+                  <span className="font-semibold">New Arrival</span>
+                </label>
               </div>
 
               <div>

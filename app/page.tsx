@@ -10,10 +10,19 @@ export default function HomePage() {
   const { products, showToast } = useCart();
   const [email, setEmail] = useState('');
 
-  const categoryCards = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category_name).filter((name): name is string => Boolean(name)))).slice(0, 6),
-    [products]
-  );
+  const categoryCards = useMemo(() => {
+    const fallback = [{ name: 'General', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80' }];
+    const categories = Array.from(
+      new Set(products.map((p) => p.category_name).filter((name): name is string => Boolean(name)))
+    );
+
+    if (categories.length === 0) return fallback;
+
+    return [{
+      name: 'General',
+      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+    }];
+  }, [products]);
 
   const bestSellers = products.filter((p) => p.is_bestseller).slice(0, 5);
   const newArrivals = products.filter((p) => p.is_new_arrival).slice(0, 5);
@@ -84,7 +93,7 @@ export default function HomePage() {
 
       {/* Shop by Category */}
       <section className="max-w-[1320px] mx-auto px-5 lg:px-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-9 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6 xl:gap-12 items-start">
           <div>
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-lavender-700">
               Shop by Category
@@ -93,40 +102,35 @@ export default function HomePage() {
               Find Your Ritual
             </h2>
           </div>
-          <p className="text-xs sm:text-sm text-charcoal-soft max-w-md">
+          <p className="text-xs sm:text-sm text-charcoal-soft max-w-xl xl:justify-self-end xl:pt-3">
             Curated edits across skin, hair and body — built around what your routine actually needs.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="mt-8">
           {categoryCards.length > 0 ? (
-            categoryCards.map((category, idx) => (
-              <Link
-                key={category}
-                href={`/shop?category=${encodeURIComponent(category)}`}
-                className="group relative aspect-[3/4] rounded-md overflow-hidden bg-beige shadow-sm"
-              >
-                <div
-                  className="absolute inset-0 transition-transform duration-500 group-hover:scale-105 bg-cover bg-center"
-                  style={{
-                    backgroundImage: `linear-gradient(${120 + idx * 30}deg, rgba(110,94,150,0.45), rgba(74,58,93,0.7)), url('${[
-                      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
-                      'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=800&q=80',
-                      'https://images.unsplash.com/photo-1526045478516-99145907023c?auto=format&fit=crop&w=800&q=80',
-                      'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=800&q=80',
-                      'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80',
-                      'https://images.unsplash.com/photo-1521590832167-7ae3c3d9d5f6?auto=format&fit=crop&w=800&q=80',
-                    ][idx % 6]}')`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 via-transparent to-transparent z-10" />
-                <span className="absolute bottom-4 left-0 right-0 text-center text-white font-serif text-sm sm:text-base z-20 group-hover:translate-y-[-2px] transition-transform">
-                  {category}
-                </span>
-              </Link>
-            ))
+            <div className="w-full max-w-[290px]">
+              {categoryCards.map((category) => (
+                <Link
+                  key={category.name}
+                  href={`/shop?category=${encodeURIComponent(category.name)}`}
+                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm"
+                >
+                  <div
+                    className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03] bg-cover bg-center"
+                    style={{
+                      backgroundImage: `linear-gradient(180deg, rgba(74, 61, 92, 0.14), rgba(51, 40, 63, 0.43)), url('${category.image}')`,
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#6c5f7d]/10 via-transparent to-[#2c2132]/20 z-10" />
+                  <span className="absolute bottom-5 left-0 right-0 text-center text-white font-serif text-[1.05rem] sm:text-[1.2rem] z-20 group-hover:translate-y-[-2px] transition-transform">
+                    {category.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
           ) : (
-            <div className="col-span-full text-center text-xs text-charcoal-muted py-8">Add products to populate the catalog.</div>
+            <div className="text-center text-xs text-charcoal-muted py-8">Add products to populate the catalog.</div>
           )}
         </div>
       </section>
