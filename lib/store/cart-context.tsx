@@ -76,6 +76,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           is_new_arrival: Boolean(product.is_new_arrival),
           rating: Number(product.rating || 4.8),
           review_count: Number(product.review_count || 0),
+          ingredients: Array.isArray(product.ingredients) ? product.ingredients : [],
+          how_to_use: product.how_to_use || '',
           primary_image: primaryImage,
           images: productImages.map((imageUrl, index) => ({
             id: `${product.id}-img-${index}`,

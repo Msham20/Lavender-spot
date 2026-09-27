@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS public.products (
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
   description TEXT,
+  ingredients TEXT[] DEFAULT '{}',
+  how_to_use TEXT,
   price NUMERIC(10, 2) NOT NULL,
   discount_price NUMERIC(10, 2),
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,

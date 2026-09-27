@@ -18,6 +18,8 @@ export default function AdminProductsPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    ingredients: '',
+    how_to_use: '',
     price: '',
     discount_price: '',
     category_name: 'Skincare',
@@ -192,6 +194,8 @@ export default function AdminProductsPage() {
     setFormData({
       name: '',
       description: '',
+      ingredients: '',
+      how_to_use: '',
       price: '',
       discount_price: '',
       category_name: categories[0]?.name || '',
@@ -212,6 +216,8 @@ export default function AdminProductsPage() {
     setFormData({
       name: p.name,
       description: p.description,
+      ingredients: (p.ingredients || []).join('\n'),
+      how_to_use: p.how_to_use || '',
       price: p.price.toString(),
       discount_price: p.discount_price ? p.discount_price.toString() : '',
       category_name: p.category_name || categories[0]?.name || '',
@@ -248,10 +254,17 @@ export default function AdminProductsPage() {
       const finalPrimaryImage = primaryImage || productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
       const selectedCategory = categories.find((category) => category.name === formData.category_name);
 
+      const ingredientsList = formData.ingredients
+        .split(/\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+
       const productPayload = {
         name: formData.name,
         slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: formData.description,
+        ingredients: ingredientsList,
+        how_to_use: formData.how_to_use.trim(),
         price: Number(formData.price),
         discount_price: formData.discount_price ? Number(formData.discount_price) : null,
         category_id: selectedCategory?.id || null,
@@ -301,6 +314,8 @@ export default function AdminProductsPage() {
                 name: formData.name,
                 slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
                 description: formData.description,
+                ingredients: ingredientsList,
+                how_to_use: formData.how_to_use.trim(),
                 price: Number(formData.price),
                 discount_price: formData.discount_price ? Number(formData.discount_price) : null,
                 category_name: formData.category_name,
@@ -325,6 +340,8 @@ export default function AdminProductsPage() {
               name: formData.name,
               slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
               description: formData.description,
+              ingredients: ingredientsList,
+              how_to_use: formData.how_to_use.trim(),
               price: Number(formData.price),
               discount_price: formData.discount_price ? Number(formData.discount_price) : null,
               category_name: formData.category_name,
@@ -504,6 +521,28 @@ export default function AdminProductsPage() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Formulation details, ingredients and benefits..."
+                  className="w-full px-3 py-2 border border-line rounded bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-charcoal-soft block mb-1">Ingredients</label>
+                <textarea
+                  rows={4}
+                  value={formData.ingredients}
+                  onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+                  placeholder="One ingredient per line or separate with commas"
+                  className="w-full px-3 py-2 border border-line rounded bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-charcoal-soft block mb-1">How to Use</label>
+                <textarea
+                  rows={4}
+                  value={formData.how_to_use}
+                  onChange={(e) => setFormData({ ...formData, how_to_use: e.target.value })}
+                  placeholder="Tell customers how and when to apply the product"
                   className="w-full px-3 py-2 border border-line rounded bg-white"
                 />
               </div>

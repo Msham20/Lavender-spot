@@ -32,6 +32,7 @@ export interface Product {
   rating: number;
   review_count: number;
   ingredients?: string[];
+  how_to_use?: string;
   benefits?: string[];
   sizes?: string[];
   images?: ProductImage[];

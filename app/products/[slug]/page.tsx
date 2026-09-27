@@ -329,9 +329,9 @@ export default function ProductDetailPage() {
           )}
 
           {activeTab === 'howto' && (
-            <p>
-              Apply a small amount to clean, dry skin morning and night. Massage gently in upward circular motions until fully absorbed. Follow with moisturizer and sunscreen during daytime.
-            </p>
+            <div className="whitespace-pre-line">
+              {product.how_to_use || 'Apply a small amount to clean, dry skin morning and night. Massage gently in upward circular motions until fully absorbed. Follow with moisturizer and sunscreen during daytime.'}
+            </div>
           )}
 
           {activeTab === 'reviews' && (

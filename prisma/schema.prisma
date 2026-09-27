@@ -41,6 +41,8 @@ model Product {
   name           String
   slug           String         @unique
   description    String?
+  ingredients    String[]       @default([])
+  how_to_use     String?
   price          Decimal        @db.Decimal(10, 2)
   discount_price Decimal?       @db.Decimal(10, 2)
   category_id    String?        @db.Uuid
