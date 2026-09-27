@@ -131,12 +131,12 @@ export default function HomePage() {
 
         <div className="mt-8 xl:mt-10">
           {categoryCards.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory xl:overflow-visible xl:grid xl:grid-cols-1 xl:gap-6 xl:max-w-[300px]">
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory xl:overflow-visible xl:flex-row xl:gap-5 xl:max-w-[100%]">
               {categoryCards.map((category) => (
                 <Link
                   key={category.name}
                   href={category.href}
-                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 snap-start w-[250px] sm:w-[270px] xl:w-full"
+                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 snap-start w-[180px] sm:w-[200px] xl:w-[220px]"
                 >
                   <div
                     className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03] bg-cover bg-center"
@@ -145,7 +145,7 @@ export default function HomePage() {
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-b from-[#6c5f7d]/10 via-transparent to-[#2c2132]/20 z-10" />
-                  <span className="absolute bottom-5 left-0 right-0 text-center text-white font-serif text-[1.05rem] sm:text-[1.2rem] z-20 group-hover:translate-y-[-2px] transition-transform">
+                  <span className="absolute bottom-4 left-0 right-0 text-center text-white font-serif text-[0.95rem] z-20 group-hover:translate-y-[-2px] transition-transform">
                     {category.name}
                   </span>
                 </Link>
