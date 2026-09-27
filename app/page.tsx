@@ -10,19 +10,35 @@ export default function HomePage() {
   const { products, showToast } = useCart();
   const [email, setEmail] = useState('');
 
-  const categoryCards = useMemo(() => {
-    const fallback = [{ name: 'General', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80' }];
-    const categories = Array.from(
-      new Set(products.map((p) => p.category_name).filter((name): name is string => Boolean(name)))
-    );
-
-    if (categories.length === 0) return fallback;
-
-    return [{
-      name: 'General',
-      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
-    }];
-  }, [products]);
+  const categoryCards = useMemo(
+    () => [
+      {
+        name: 'General',
+        image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        name: 'Skincare',
+        image: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        name: 'Face',
+        image: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        name: 'Hair Care',
+        image: 'https://images.unsplash.com/photo-1521590832167-7ae3c3d9d5f6?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        name: 'Body Care',
+        image: 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        name: 'Lips',
+        image: 'https://images.unsplash.com/photo-1526045478516-99145907023c?auto=format&fit=crop&w=900&q=80',
+      },
+    ],
+    []
+  );
 
   const bestSellers = products.filter((p) => p.is_bestseller).slice(0, 5);
   const newArrivals = products.filter((p) => p.is_new_arrival).slice(0, 5);
@@ -109,7 +125,7 @@ export default function HomePage() {
 
         <div className="mt-8">
           {categoryCards.length > 0 ? (
-            <div className="w-full max-w-[290px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-6 w-full max-w-[300px]">
               {categoryCards.map((category) => (
                 <Link
                   key={category.name}
