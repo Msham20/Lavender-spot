@@ -241,6 +241,19 @@ export default function AdminProductsPage() {
     }
   };
 
+  const supportsHowToUseColumn = async (supabase: ReturnType<typeof createClient>) => {
+    try {
+      const { error } = await supabase.from('products').select('how_to_use').limit(1);
+      return !error;
+    } catch (error: any) {
+      const message = String(error?.message || '').toLowerCase();
+      if (message.includes('how_to_use') && message.includes('does not exist')) {
+        return false;
+      }
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -253,18 +266,18 @@ export default function AdminProductsPage() {
       const supabase = createClient();
       const finalPrimaryImage = primaryImage || productImages[0] || 'linear-gradient(135deg, #F3EAF8, #7E60BF)';
       const selectedCategory = categories.find((category) => category.name === formData.category_name);
+      const hasHowToUseColumn = await supportsHowToUseColumn(supabase);
 
       const ingredientsList = formData.ingredients
         .split(/\n|,/)
         .map((item) => item.trim())
         .filter(Boolean);
 
-      const productPayload = {
+      const productPayload: Record<string, any> = {
         name: formData.name,
         slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         description: formData.description,
         ingredients: ingredientsList,
-        how_to_use: formData.how_to_use.trim(),
         price: Number(formData.price),
         discount_price: formData.discount_price ? Number(formData.discount_price) : null,
         category_id: selectedCategory?.id || null,
@@ -276,6 +289,10 @@ export default function AdminProductsPage() {
         rating: editingProduct?.rating ?? 4.8,
         review_count: editingProduct?.review_count ?? 1,
       };
+
+      if (hasHowToUseColumn) {
+        productPayload.how_to_use = formData.how_to_use.trim();
+      }
 
       let savedProductId = editingProduct?.id;
 
