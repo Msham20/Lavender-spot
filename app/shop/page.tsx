@@ -24,8 +24,10 @@ function ShopContent() {
     const categoryParam = searchParams.get('category');
     const filterParam = searchParams.get('filter');
 
-    if (categoryParam) {
+    if (categoryParam && categoryParam.toLowerCase() !== 'general') {
       setSelectedCategories([categoryParam]);
+    } else if (categoryParam && categoryParam.toLowerCase() === 'general') {
+      setSelectedCategories([]);
     }
     if (filterParam === 'bestseller' || filterParam === 'new') {
       // sort/filter handles this
@@ -70,7 +72,7 @@ function ShopContent() {
     }
 
     // Categories
-    if (selectedCategories.length > 0) {
+    if (selectedCategories.length > 0 && !selectedCategories.some((category) => category.toLowerCase() === 'general')) {
       list = list.filter((p) => p.category_name && selectedCategories.includes(p.category_name));
     }
 

@@ -115,7 +115,7 @@ export default function HomePage() {
 
       {/* Shop by Category */}
       <section className="max-w-[1320px] mx-auto px-5 lg:px-10">
-        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6 xl:gap-12 items-start">
+        <div className="flex flex-col gap-4 xl:grid xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-12 xl:items-start">
           <div>
             <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-lavender-700">
               Shop by Category
@@ -131,12 +131,12 @@ export default function HomePage() {
 
         <div className="mt-8 xl:mt-10">
           {categoryCards.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 w-full xl:max-w-[calc(100%-18px)] xl:pl-0">
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory xl:overflow-visible xl:grid xl:grid-cols-1 xl:gap-6 xl:max-w-[300px]">
               {categoryCards.map((category) => (
                 <Link
                   key={category.name}
                   href={category.href}
-                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm w-full max-w-[300px] xl:max-w-[300px]"
+                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 snap-start w-[250px] sm:w-[270px] xl:w-full"
                 >
                   <div
                     className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03] bg-cover bg-center"
