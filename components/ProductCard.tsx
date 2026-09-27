@@ -53,11 +53,11 @@ export default function ProductCard({ product }: ProductCardProps) {
           <img
             src={product.primary_image}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div
-            className="w-full h-full flex items-center justify-center font-serif text-3xl text-white transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full flex items-center justify-center font-serif text-3xl text-white"
             style={{ background: product.primary_image || 'linear-gradient(135deg, #F3EAF8, #7E60BF)' }}
           >
             {product.name.charAt(0)}
@@ -70,7 +70,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
-          className={`absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all duration-200 ${
+          className={`absolute bottom-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md ${
             wished ? 'text-lavender-700 opacity-100' : 'text-charcoal opacity-100'
           }`}
           aria-label="Wishlist"
@@ -85,7 +85,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               e.stopPropagation();
               addToCart(product.id);
             }}
-            className="absolute left-2 right-2 bottom-2 z-10 bg-charcoal/95 text-ivory text-[9.5px] font-semibold uppercase tracking-wider py-2 text-center rounded opacity-100 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition-all duration-200 hover:bg-lavender-700 shadow-sm"
+            className="absolute left-2 right-2 bottom-2 z-10 bg-charcoal/95 text-ivory text-[9.5px] font-semibold uppercase tracking-wider py-2 text-center rounded opacity-100 hover:bg-lavender-700 shadow-sm"
           >
             Quick Add
           </button>
