@@ -9,7 +9,7 @@ module.exports = {
     extend: {
       colors: {
         lavender: {
-          50: '#FAF8FC',
+          50: '#F7F2FA',
           100: '#F3EAF8',
           200: '#EBE3F5',
           300: '#D8C7EC',
@@ -25,7 +25,7 @@ module.exports = {
           soft: '#4A433C',
           muted: '#8A827A',
         },
-        ivory: '#FAF8FC',
+        ivory: '#F7F2FA',
         beige: '#F4EFF7',
         line: '#E6DFED',
       },

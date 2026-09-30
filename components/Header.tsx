@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Search, ShoppingBag, Heart, User, Menu, X } from 'lucide-react';
 import { useCart } from '@/lib/store/cart-context';
@@ -52,11 +53,12 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF8FC]/95 backdrop-blur-md border-b border-line w-full">
+    <header className="sticky top-0 z-50 bg-ivory/95 backdrop-blur-md border-b border-line w-full">
       <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-10 h-16 sm:h-20 flex items-center justify-between gap-3 sm:gap-5">
         {/* Logo */}
-        <Link href="/" className="font-serif text-xl sm:text-2xl font-medium tracking-wide text-charcoal flex-shrink-0">
-          Lavender Spot
+        <Link href="/" aria-label="Lavender Spot home" className="font-serif text-xl sm:text-2xl font-medium tracking-wide text-charcoal flex-shrink-0 inline-flex items-center gap-2">
+          <Image src="/lavender-spot-emblem.svg" alt="" width={48} height={48} priority className="w-10 h-10 sm:w-12 sm:h-12" />
+          <span>Lavender Spot</span>
         </Link>
 
         {/* Desktop Navigation Links */}
