@@ -131,25 +131,36 @@ export default function HomePage() {
 
         <div className="mt-8 xl:mt-10">
           {categoryCards.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory xl:overflow-visible xl:flex-row xl:gap-5 xl:max-w-[100%]">
-              {categoryCards.map((category) => (
-                <Link
-                  key={category.name}
-                  href={category.href}
-                  className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 snap-start w-[180px] sm:w-[200px] xl:w-[220px] transition-none"
-                >
+            <div className="category-slider-viewport overflow-hidden">
+              <div className="category-slider-track flex w-max">
+                {[false, true].map((isDuplicate) => (
                   <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{
-                      backgroundImage: `linear-gradient(180deg, rgba(74, 61, 92, 0.14), rgba(51, 40, 63, 0.43)), url('${category.image}')`,
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-[#6c5f7d]/10 via-transparent to-[#2c2132]/20 z-10" />
-                  <span className="absolute bottom-4 left-0 right-0 text-center text-white font-serif text-[0.95rem] z-20">
-                    {category.name}
-                  </span>
-                </Link>
-              ))}
+                    key={isDuplicate ? 'duplicate' : 'original'}
+                    aria-hidden={isDuplicate}
+                    className="flex shrink-0 gap-4 pr-4 xl:gap-5 xl:pr-5"
+                  >
+                    {categoryCards.map((category) => (
+                      <Link
+                        key={category.name}
+                        href={category.href}
+                        tabIndex={isDuplicate ? -1 : undefined}
+                        className="group relative block aspect-[10/12] rounded-md overflow-hidden bg-[#4c425a] shadow-sm shrink-0 w-[180px] sm:w-[200px] xl:w-[220px] transition-none"
+                      >
+                        <div
+                          className="absolute inset-0 bg-cover bg-center"
+                          style={{
+                            backgroundImage: `linear-gradient(180deg, rgba(74, 61, 92, 0.14), rgba(51, 40, 63, 0.43)), url('${category.image}')`,
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-b from-[#6c5f7d]/10 via-transparent to-[#2c2132]/20 z-10" />
+                        <span className="absolute bottom-4 left-0 right-0 text-center text-white font-serif text-[0.95rem] z-20">
+                          {category.name}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-center text-xs text-charcoal-muted py-8">Add products to populate the catalog.</div>

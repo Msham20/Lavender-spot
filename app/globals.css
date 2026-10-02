@@ -58,6 +58,21 @@ h1, h2, h3, .serif {
   animation: marquee 18s linear infinite;
 }
 
+.category-slider-track {
+  animation: marquee 36s linear infinite;
+}
+
+.category-slider-viewport:hover .category-slider-track,
+.category-slider-viewport:focus-within .category-slider-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-slider-track {
+    animation: none;
+  }
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
