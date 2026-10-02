@@ -13,11 +13,13 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
 
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
@@ -33,24 +35,29 @@ export default function SignupPage() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { name },
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Faccount`,
         },
       });
 
       if (error) {
+        throw error;
+      }
+
+      if (data.session && data.user) {
         localStorage.setItem(
           'lavender_spot_user_session',
-          JSON.stringify({ email, name, is_admin: false })
+          JSON.stringify({ email: data.user.email, name, is_admin: false })
         );
         router.push('/account');
         return;
       }
 
-      router.push('/account');
+      setSuccess('Account created. Check your email and confirm your address before signing in.');
     } catch (err: any) {
       setError(err.message || 'Failed to create account.');
     } finally {
@@ -72,6 +79,12 @@ export default function SignupPage() {
         {error && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded font-semibold">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded font-semibold">
+            {success}
           </div>
         )}
 
