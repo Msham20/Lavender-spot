@@ -20,26 +20,30 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        if (email && password.length >= 6) {
-          localStorage.setItem(
-            'lavender_spot_user_session',
-            JSON.stringify({ email, name: email.split('@')[0], is_admin: false })
-          );
-          router.push('/account');
-          return;
-        }
         throw error;
       }
 
+      if (!data.user) {
+        throw new Error('Supabase did not return a signed-in user. Please try again.');
+      }
+
+      localStorage.setItem(
+        'lavender_spot_user_session',
+        JSON.stringify({
+          email: data.user.email,
+          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'Customer',
+          is_admin: false,
+        })
+      );
       router.push('/account');
     } catch (err: any) {
-      setError(err.message || 'Failed to log in. Please check your credentials.');
+      setError(err.message || 'Failed to log in. Please check your credentials and try again.');
     } finally {
       setLoading(false);
     }
