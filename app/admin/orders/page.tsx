@@ -39,6 +39,24 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleUpdatePaymentStatus = (orderId: string, newPaymentStatus: string) => {
+    const updated = orders.map((ord) => {
+      if (ord.id === orderId) {
+        const updatedOrd = { ...ord, paymentStatus: newPaymentStatus };
+        localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrd));
+        return updatedOrd;
+      }
+      return ord;
+    });
+
+    setOrders(updated);
+    localStorage.setItem('lavender_spot_user_orders', JSON.stringify(updated));
+    showToast(`Payment for ${orderId} marked as ${newPaymentStatus.toLowerCase()}.`);
+    if (activeModalOrder?.id === orderId) {
+      setActiveModalOrder({ ...activeModalOrder, paymentStatus: newPaymentStatus });
+    }
+  };
+
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
       o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -191,6 +209,31 @@ export default function AdminOrdersPage() {
             </div>
 
             {/* Purchased Items List */}
+            {activeModalOrder.paymentMethod === 'UPI' && (
+              <div className="space-y-3 border border-line rounded p-4">
+                <div>
+                  <span className="font-semibold block text-charcoal mb-1">UPI Payment</span>
+                  <p className="text-charcoal-soft">
+                    Status: {activeModalOrder.paymentStatus || 'Awaiting payment'}<br />
+                    Transaction reference: {activeModalOrder.upiTransactionReference || 'Not submitted'}
+                  </p>
+                </div>
+                <label className="block text-charcoal-soft">
+                  Update payment verification
+                  <select
+                    value={activeModalOrder.paymentStatus || 'Awaiting payment'}
+                    onChange={(e) => handleUpdatePaymentStatus(activeModalOrder.id, e.target.value)}
+                    className="mt-1 block w-full py-2 px-3 border border-line rounded bg-white text-charcoal"
+                  >
+                    <option value="Awaiting payment">Awaiting payment</option>
+                    <option value="Submitted for verification">Submitted for verification</option>
+                    <option value="Verified">Verified</option>
+                    <option value="Not received">Not received</option>
+                  </select>
+                </label>
+              </div>
+            )}
+
             <div className="space-y-2">
               <span className="font-semibold block text-charcoal">Purchased Products</span>
               <div className="divide-y divide-line border-t border-b border-line">

@@ -4,7 +4,10 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/store/cart-context';
-import { Lock, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Lock, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+
+const UPI_ID = 'aaruvimbs1212@okicici';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -22,9 +25,20 @@ export default function CheckoutPage() {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [upiOrder, setUpiOrder] = useState<any | null>(null);
+  const [upiReference, setUpiReference] = useState('');
+  const [upiError, setUpiError] = useState<string | null>(null);
 
   const shippingCharge = cartSubtotal >= 999 || cartSubtotal === 0 ? 0 : 79;
   const finalTotal = cartSubtotal + shippingCharge;
+  const upiPaymentUrl = upiOrder
+    ? `upi://pay?${new URLSearchParams({
+        pa: UPI_ID,
+        am: upiOrder.total.toFixed(2),
+        cu: 'INR',
+        tn: `Lavender Spot order ${upiOrder.id}`,
+      }).toString()}`
+    : '';
 
   if (cart.length === 0) {
     return (
@@ -42,11 +56,105 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+
+  if (upiOrder) {
+    return (
+      <div className="max-w-[1320px] mx-auto px-5 lg:px-10 py-10">
+        <div className="max-w-2xl mx-auto bg-white border border-line rounded-md p-6 sm:p-10 space-y-6">
+          <div className="text-center space-y-2">
+            <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-lavender-700">Direct UPI Payment</span>
+            <h1 className="text-3xl font-serif text-charcoal">Pay ₹{upiOrder.total.toFixed(2)}</h1>
+            <p className="text-sm text-charcoal-soft">Scan with a UPI app or open the payment app on this device.</p>
+          </div>
+
+          <div className="flex justify-center">
+            <div className="p-3 border border-line rounded bg-white">
+              <QRCodeSVG value={upiPaymentUrl} size={208} level="M" includeMargin />
+            </div>
+          </div>
+
+          <div className="text-center space-y-2 text-sm">
+            <p className="text-charcoal-soft">Pay to this UPI ID</p>
+            <p className="font-semibold text-charcoal">{UPI_ID}</p>
+            <p className="text-xs text-charcoal-muted">Order {upiOrder.id} · Exact amount ₹{upiOrder.total.toFixed(2)}</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <a
+              href={upiPaymentUrl}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-lavender-700 text-white text-xs font-semibold uppercase tracking-wider rounded hover:bg-lavender-800"
+            >
+              <ExternalLink className="w-4 h-4" /> Open UPI App
+            </a>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(UPI_ID)}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 border border-line text-charcoal text-xs font-semibold uppercase tracking-wider rounded hover:bg-beige"
+            >
+              <Copy className="w-4 h-4" /> Copy UPI ID
+            </button>
+          </div>
+
+          <div className="border-t border-line pt-5 space-y-3">
+            <label htmlFor="upi-reference" className="block text-xs font-semibold text-charcoal-soft">
+              After paying, enter the transaction reference (UTR) shown in your UPI app.
+            </label>
+            <input
+              id="upi-reference"
+              type="text"
+              value={upiReference}
+              onChange={(event) => {
+                setUpiReference(event.target.value);
+                setUpiError(null);
+              }}
+              placeholder="UPI transaction reference"
+              className="w-full px-3 py-2.5 text-sm border border-line rounded bg-white"
+            />
+            {upiError && <p className="text-xs text-rose-700">{upiError}</p>}
+            <p className="text-xs text-charcoal-muted">
+              This records your reference only. The store must verify the payment before treating the order as paid.
+            </p>
+            <button
+              type="button"
+              onClick={handleUpiPaymentSubmitted}
+              className="w-full py-3 bg-charcoal text-white text-xs font-semibold uppercase tracking-widest rounded hover:bg-lavender-700"
+            >
+              I Have Paid
+            </button>
+            <button
+              type="button"
+              onClick={() => setUpiOrder(null)}
+              className="w-full py-2 text-xs font-semibold text-charcoal-soft hover:text-charcoal"
+            >
+              Back to checkout
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  function saveOrder(orderData: any) {
+    try {
+      localStorage.setItem(`order_${orderData.id}`, JSON.stringify(orderData));
+      const existingOrders = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
+      localStorage.setItem('lavender_spot_user_orders', JSON.stringify([orderData, ...existingOrders]));
+    } catch (e) {
+      console.error(e);
+    }
+
+    cart.forEach((item) => {
+      item.product.stock = Math.max(0, item.product.stock - item.quantity);
+    });
+
+    clearCart();
+    showToast(orderData.paymentMethod === 'UPI' ? 'Order submitted for payment verification.' : 'Order placed successfully!');
+    router.push(`/order-success/${orderData.id}`);
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Validate fields
     if (!formData.name || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state || !formData.pincode) {
       setError('Please fill in all required shipping fields.');
       return;
@@ -62,14 +170,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Validate stock
     const outOfStock = cart.find((item) => item.quantity > item.product.stock);
     if (outOfStock) {
       setError(`Stock limit exceeded for ${outOfStock.product.name}. Available stock: ${outOfStock.product.stock}`);
       return;
     }
 
-    // Create Order Object
     const orderId = 'LS-' + Math.floor(100000 + Math.random() * 900000);
     const orderData = {
       id: orderId,
@@ -78,6 +184,9 @@ export default function CheckoutPage() {
       shippingCharge,
       total: finalTotal,
       customer: formData,
+      paymentMethod: formData.paymentMethod,
+      paymentStatus: formData.paymentMethod === 'UPI' ? 'Awaiting payment' : 'Pay on delivery',
+      status: 'Pending',
       created_at: new Date().toISOString(),
       estimatedDelivery: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
         day: 'numeric',
@@ -86,26 +195,26 @@ export default function CheckoutPage() {
       }),
     };
 
-    // Store order summary locally for immediate rendering
-    try {
-      localStorage.setItem(`order_${orderId}`, JSON.stringify(orderData));
-      
-      // Also update stored orders list
-      const existingOrders = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
-      localStorage.setItem('lavender_spot_user_orders', JSON.stringify([orderData, ...existingOrders]));
-    } catch (e) {
-      console.error(e);
+    if (formData.paymentMethod === 'UPI') {
+      setUpiOrder(orderData);
+      return;
     }
 
-    // Deduct stock locally
-    cart.forEach((item) => {
-      item.product.stock = Math.max(0, item.product.stock - item.quantity);
-    });
-
-    clearCart();
-    showToast('Order placed successfully!');
-    router.push(`/order-success/${orderId}`);
+    saveOrder(orderData);
   };
+
+  function handleUpiPaymentSubmitted() {
+    if (!upiReference.trim()) {
+      setUpiError('Enter the UPI transaction reference from your payment app.');
+      return;
+    }
+
+    saveOrder({
+      ...upiOrder,
+      paymentStatus: 'Submitted for verification',
+      upiTransactionReference: upiReference.trim(),
+    });
+  }
 
   return (
     <div className="max-w-[1320px] mx-auto px-5 lg:px-10 py-10 space-y-8">
@@ -251,10 +360,7 @@ export default function CheckoutPage() {
             </h2>
             <div className="space-y-3">
               {[
-                { id: 'UPI', label: 'UPI (GPay / PhonePe / Paytm / BHIM)' },
-                { id: 'Card', label: 'Credit / Debit Card (Visa, Mastercard, RuPay)' },
-                { id: 'NetBanking', label: 'Net Banking' },
-                { id: 'COD', label: 'Cash on Delivery (COD)' },
+                { id: 'UPI', label: 'Direct UPI (GPay / PhonePe / Paytm / BHIM)' },
               ].map((pm) => (
                 <label
                   key={pm.id}
@@ -276,6 +382,9 @@ export default function CheckoutPage() {
                 </label>
               ))}
             </div>
+            <p className="text-xs text-charcoal-muted">
+              UPI payments are submitted for manual verification. Do not close checkout until you have noted your transaction reference.
+            </p>
           </div>
 
           <button

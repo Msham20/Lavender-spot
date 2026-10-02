@@ -31,11 +31,15 @@ export default function OrderSuccessPage() {
 
         <div className="space-y-2">
           <span className="text-xs font-semibold uppercase tracking-widest text-lavender-700">
-            Order Confirmed
+            {order?.paymentMethod === 'UPI' ? 'Payment Submitted' : 'Order Confirmed'}
           </span>
-          <h1 className="text-3xl font-serif text-charcoal">Order Placed Successfully!</h1>
+          <h1 className="text-3xl font-serif text-charcoal">
+            {order?.paymentMethod === 'UPI' ? 'Payment Awaiting Verification' : 'Order Placed Successfully!'}
+          </h1>
           <p className="text-xs sm:text-sm text-charcoal-soft leading-relaxed">
-            Thank you for shopping with Lavender Spot. A confirmation email has been dispatched to your inbox.
+            {order?.paymentMethod === 'UPI'
+              ? 'Your UPI reference has been recorded. The store must verify the transfer before your order is marked paid.'
+              : 'Thank you for shopping with Lavender Spot. Your order has been received.'}
           </p>
         </div>
 
@@ -46,6 +50,12 @@ export default function OrderSuccessPage() {
 
         {order && (
           <div className="text-left border border-line rounded p-5 space-y-4 text-xs bg-ivory">
+            {order.paymentMethod === 'UPI' && (
+              <div className="border-b border-line pb-3 space-y-1">
+                <p><strong>Payment status:</strong> {order.paymentStatus}</p>
+                <p><strong>UPI transaction reference:</strong> {order.upiTransactionReference}</p>
+              </div>
+            )}
             <div className="flex justify-between font-semibold border-b border-line pb-2">
               <span>Delivery Details</span>
               <span className="text-lavender-700">Estimated: {order.estimatedDelivery}</span>
@@ -64,7 +74,7 @@ export default function OrderSuccessPage() {
                 </div>
               ))}
               <div className="border-t border-line pt-2 flex justify-between font-semibold text-charcoal text-sm">
-                <span>Total Amount Paid</span>
+                <span>{order.paymentMethod === 'UPI' ? 'Order Total' : 'Total Amount'}</span>
                 <span>₹{order.total}</span>
               </div>
             </div>
