@@ -17,53 +17,10 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@lavender-spot.com')
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '')
   .split(',')
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
-
-async function ensureAdminProfile(
-  supabase: ReturnType<typeof createClient>,
-  user: { id: string; email?: string | null; user_metadata?: Record<string, any> | null }
-) {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, is_admin, name, email')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profile?.is_admin) {
-    return true;
-  }
-
-  if (profileError && profileError.code !== 'PGRST116') {
-    return false;
-  }
-
-  const isAllowedAdmin =
-    !!user.user_metadata?.is_admin ||
-    !!user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
-
-  if (!isAllowedAdmin) {
-    return false;
-  }
-
-  const { error: upsertError } = await supabase.from('profiles').upsert(
-    {
-      id: user.id,
-      email: user.email,
-      name:
-        user.user_metadata?.name ||
-        (user.email ? user.email.split('@')[0] : 'Admin User') ||
-        'Admin User',
-      is_admin: true,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'id' }
-  );
-
-  return !upsertError;
-}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -87,9 +44,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           return;
         }
 
-        const isAuthorized = await ensureAdminProfile(supabase, user);
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle();
 
-        if (!isAuthorized) {
+        const isConfiguredAdmin = !!user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+        if (profileError || !profile?.is_admin || !isConfiguredAdmin || !user.email_confirmed_at) {
           await supabase.auth.signOut();
           router.replace('/admin/login');
           return;

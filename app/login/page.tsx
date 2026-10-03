@@ -27,7 +27,7 @@ export default function LoginPage() {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -47,7 +47,9 @@ export default function LoginPage() {
           is_admin: false,
         })
       );
-      router.push('/account');
+      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      const destination = redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/account';
+      router.replace(destination);
     } catch (err: any) {
       if (err.code === 'email_not_confirmed' || /email not confirmed/i.test(err.message || '')) {
         setError('Please confirm your email address from the link we sent before signing in.');

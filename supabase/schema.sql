@@ -152,7 +152,7 @@ BEGIN
     WHERE id = auth.uid() AND is_admin = true
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 -- Drop existing policies before re-creating them to support re-runs.
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
@@ -183,7 +183,9 @@ DROP POLICY IF EXISTS "Admin Delete Access" ON storage.objects;
 
 -- Profiles Policies
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id OR public.is_admin());
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE TO authenticated
+  USING ((SELECT auth.uid()) = id)
+  WITH CHECK ((SELECT auth.uid()) = id);
 CREATE POLICY "Admins can view all profiles" ON public.profiles FOR SELECT USING (public.is_admin());
 
 -- Categories Policies (Public Read, Admin Write)
@@ -222,6 +224,9 @@ CREATE POLICY "Users view own order items" ON public.order_items FOR SELECT USIN
 );
 CREATE POLICY "Users insert order items" ON public.order_items FOR INSERT WITH CHECK (true);
 
+REVOKE UPDATE ON TABLE public.profiles FROM PUBLIC, anon, authenticated;
+GRANT UPDATE (name, phone) ON TABLE public.profiles TO authenticated;
+
 -- Trigger for Profile Creation on Signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -232,7 +237,7 @@ BEGIN
     new.id,
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
-    COALESCE((new.raw_user_meta_data->>'is_admin')::boolean, false)
+    false
   )
   ON CONFLICT (id) DO UPDATE
   SET name = EXCLUDED.name,
@@ -240,7 +245,7 @@ BEGIN
       updated_at = now();
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

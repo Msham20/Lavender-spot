@@ -36,7 +36,7 @@ export default function SignupPage() {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: { name },
@@ -53,11 +53,11 @@ export default function SignupPage() {
           'lavender_spot_user_session',
           JSON.stringify({ email: data.user.email, name, is_admin: false })
         );
-        router.push('/account');
+        router.replace('/account');
         return;
       }
 
-      setSuccess('Account created. Check your email and confirm your address before signing in.');
+      setSuccess(`Account created for ${email.trim()}. Check your inbox and confirm your email before signing in.`);
     } catch (err: any) {
       setError(err.message || 'Failed to create account.');
     } finally {
