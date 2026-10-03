@@ -38,6 +38,38 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@media print {
+  @page {
+    margin: 16mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .invoice-print,
+  .invoice-print * {
+    visibility: visible !important;
+  }
+
+  .invoice-print {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    padding: 0 !important;
+    color: #222 !important;
+    background: #fff !important;
+  }
+
+  .invoice-print-control {
+    display: none !important;
+  }
+}
+
 h1, h2, h3, .serif {
   font-family: 'Fraunces', serif;
   font-weight: 500;

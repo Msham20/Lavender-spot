@@ -42,7 +42,11 @@ export default function AdminOrdersPage() {
   const handleUpdatePaymentStatus = (orderId: string, newPaymentStatus: string) => {
     const updated = orders.map((ord) => {
       if (ord.id === orderId) {
-        const updatedOrd = { ...ord, paymentStatus: newPaymentStatus };
+        const updatedOrd = {
+          ...ord,
+          paymentStatus: newPaymentStatus,
+          paymentVerifiedAt: newPaymentStatus === 'Verified' ? new Date().toISOString() : null,
+        };
         localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrd));
         return updatedOrd;
       }
