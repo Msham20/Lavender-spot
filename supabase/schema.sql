@@ -237,7 +237,7 @@ BEGIN
     new.id,
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
-    false
+    COALESCE((new.raw_user_meta_data->>'is_admin')::boolean, false)
   )
   ON CONFLICT (id) DO UPDATE
   SET name = EXCLUDED.name,
