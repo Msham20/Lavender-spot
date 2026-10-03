@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/store/cart-context';
+import { createClient } from '@/lib/supabase/client';
 import { Lock, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -28,6 +29,7 @@ export default function CheckoutPage() {
   const [upiOrder, setUpiOrder] = useState<any | null>(null);
   const [upiReference, setUpiReference] = useState('');
   const [upiError, setUpiError] = useState<string | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const shippingCharge = cartSubtotal >= 999 || cartSubtotal === 0 ? 0 : 79;
   const finalTotal = cartSubtotal + shippingCharge;
@@ -117,9 +119,10 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={handleUpiPaymentSubmitted}
-              className="w-full py-3 bg-charcoal text-white text-xs font-semibold uppercase tracking-widest rounded hover:bg-lavender-700"
+              disabled={savingOrder}
+              className="w-full py-3 bg-charcoal text-white text-xs font-semibold uppercase tracking-widest rounded hover:bg-lavender-700 disabled:opacity-60"
             >
-              I Have Paid
+              {savingOrder ? 'Saving Order...' : 'I Have Paid'}
             </button>
             <button
               type="button"
@@ -133,22 +136,62 @@ export default function CheckoutPage() {
       </div>
     );
   }
-  function saveOrder(orderData: any) {
+  async function saveOrder(orderData: any) {
+    if (savingOrder) return;
+    setSavingOrder(true);
+
     try {
-      localStorage.setItem(`order_${orderData.id}`, JSON.stringify(orderData));
-      const existingOrders = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
-      localStorage.setItem('lavender_spot_user_orders', JSON.stringify([orderData, ...existingOrders]));
-    } catch (e) {
-      console.error(e);
+      const supabase = createClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Please sign in again before placing your order.');
+      }
+
+      const { data: databaseOrderId, error: orderError } = await supabase.rpc('create_customer_order', {
+        p_order_number: orderData.id,
+        p_shipping_name: orderData.customer.name,
+        p_shipping_phone: orderData.customer.phone.trim(),
+        p_shipping_address: orderData.customer.address,
+        p_shipping_city: orderData.customer.city,
+        p_shipping_state: orderData.customer.state,
+        p_shipping_pincode: orderData.customer.pincode.trim(),
+        p_payment_method: orderData.paymentMethod,
+        p_payment_reference: orderData.upiTransactionReference || null,
+        p_items: orderData.items.map((item: any) => ({
+          product_id: item.product_id,
+          size: item.size,
+          quantity: item.quantity,
+        })),
+      });
+
+      if (orderError || !databaseOrderId) {
+        throw orderError || new Error('Order could not be recorded.');
+      }
+
+      const savedOrder = { ...orderData, databaseId: databaseOrderId, customer: { ...orderData.customer, email: user.email } };
+      try {
+        localStorage.setItem(`order_${orderData.id}`, JSON.stringify(savedOrder));
+        const existingOrders = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
+        localStorage.setItem('lavender_spot_user_orders', JSON.stringify([savedOrder, ...existingOrders]));
+      } catch (storageError) {
+        console.error('Order saved remotely but local cache could not be updated:', storageError);
+      }
+
+      clearCart();
+      showToast('Order submitted for payment verification.');
+      router.push(`/order-success/${orderData.id}`);
+    } catch (saveError) {
+      console.error('Unable to save order:', saveError);
+      const message = 'We could not save your order. Keep your payment reference and retry; do not pay again.';
+      if (orderData.paymentMethod === 'UPI') {
+        setUpiError(message);
+      } else {
+        setError(message);
+      }
+    } finally {
+      setSavingOrder(false);
     }
 
-    cart.forEach((item) => {
-      item.product.stock = Math.max(0, item.product.stock - item.quantity);
-    });
-
-    clearCart();
-    showToast(orderData.paymentMethod === 'UPI' ? 'Order submitted for payment verification.' : 'Order placed successfully!');
-    router.push(`/order-success/${orderData.id}`);
   }
 
   const handleSubmit = (e: React.FormEvent) => {

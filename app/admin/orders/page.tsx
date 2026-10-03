@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/lib/store/cart-context';
+import { createClient } from '@/lib/supabase/client';
+import { fetchAdminOrders } from '@/lib/admin/orders';
 import { Search, Eye, X, CheckCircle2 } from 'lucide-react';
 
 export default function AdminOrdersPage() {
@@ -10,54 +12,72 @@ export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
   const [activeModalOrder, setActiveModalOrder] = useState<any | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
-      setOrders(stored);
-    } catch (e) {
-      console.error(e);
-    }
+    let mounted = true;
+    const loadOrders = async () => {
+      try {
+        const storedOrders = await fetchAdminOrders();
+        if (mounted) {
+          setOrders(storedOrders);
+          setOrderError(null);
+        }
+      } catch (loadError) {
+        console.error('Unable to load orders:', loadError);
+        if (mounted) setOrderError('Orders could not be loaded from the database.');
+      }
+    };
+
+    loadOrders();
+    window.addEventListener('focus', loadOrders);
+    return () => {
+      mounted = false;
+      window.removeEventListener('focus', loadOrders);
+    };
   }, []);
 
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
-    const updated = orders.map((ord) => {
-      if (ord.id === orderId) {
-        const updatedOrd = { ...ord, status: newStatus };
-        // Sync individual order storage
-        localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrd));
-        return updatedOrd;
-      }
-      return ord;
-    });
+  const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order?.databaseId) return;
 
+    const supabase = createClient();
+    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', order.databaseId);
+    if (error) {
+      showToast('Could not update order status.');
+      return;
+    }
+
+    const updated = orders.map((item) => item.id === orderId ? { ...item, status: newStatus } : item);
     setOrders(updated);
-    localStorage.setItem('lavender_spot_user_orders', JSON.stringify(updated));
     showToast(`Order ${orderId} status updated to "${newStatus}"`);
     if (activeModalOrder && activeModalOrder.id === orderId) {
       setActiveModalOrder({ ...activeModalOrder, status: newStatus });
     }
   };
 
-  const handleUpdatePaymentStatus = (orderId: string, newPaymentStatus: string) => {
-    const updated = orders.map((ord) => {
-      if (ord.id === orderId) {
-        const updatedOrd = {
-          ...ord,
-          paymentStatus: newPaymentStatus,
-          paymentVerifiedAt: newPaymentStatus === 'Verified' ? new Date().toISOString() : null,
-        };
-        localStorage.setItem(`order_${orderId}`, JSON.stringify(updatedOrd));
-        return updatedOrd;
-      }
-      return ord;
-    });
+  const handleUpdatePaymentStatus = async (orderId: string, newPaymentStatus: string) => {
+    const order = orders.find((item) => item.id === orderId);
+    if (!order?.databaseId) return;
 
+    const paymentVerifiedAt = newPaymentStatus === 'Verified' ? new Date().toISOString() : null;
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('orders')
+      .update({ payment_status: newPaymentStatus, payment_verified_at: paymentVerifiedAt })
+      .eq('id', order.databaseId);
+    if (error) {
+      showToast('Could not update payment status.');
+      return;
+    }
+
+    const updated = orders.map((item) => item.id === orderId
+      ? { ...item, paymentStatus: newPaymentStatus, paymentVerifiedAt }
+      : item);
     setOrders(updated);
-    localStorage.setItem('lavender_spot_user_orders', JSON.stringify(updated));
     showToast(`Payment for ${orderId} marked as ${newPaymentStatus.toLowerCase()}.`);
     if (activeModalOrder?.id === orderId) {
-      setActiveModalOrder({ ...activeModalOrder, paymentStatus: newPaymentStatus });
+      setActiveModalOrder({ ...activeModalOrder, paymentStatus: newPaymentStatus, paymentVerifiedAt });
     }
   };
 
@@ -112,6 +132,8 @@ export default function AdminOrdersPage() {
           <option value="Cancelled">Cancelled</option>
         </select>
       </div>
+
+      {orderError && <p role="alert" className="text-xs text-rose-700">{orderError}</p>}
 
       {/* Orders Table */}
       <div className="bg-white border border-line rounded-md overflow-x-auto shadow-sm">

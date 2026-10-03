@@ -106,6 +106,8 @@ CREATE TABLE IF NOT EXISTS public.orders (
   status TEXT DEFAULT 'Pending', -- Pending, Confirmed, Processing, Shipped, Delivered, Cancelled
   payment_method TEXT DEFAULT 'UPI',
   payment_status TEXT DEFAULT 'Completed',
+  payment_reference TEXT,
+  payment_verified_at TIMESTAMPTZ,
   shipping_name TEXT NOT NULL,
   shipping_phone TEXT NOT NULL,
   shipping_address TEXT NOT NULL,
@@ -128,6 +130,125 @@ CREATE TABLE IF NOT EXISTS public.order_items (
   total_price NUMERIC(10, 2) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_reference TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMPTZ;
+
+CREATE OR REPLACE FUNCTION public.create_customer_order(
+  p_order_number TEXT,
+  p_shipping_name TEXT,
+  p_shipping_phone TEXT,
+  p_shipping_address TEXT,
+  p_shipping_city TEXT,
+  p_shipping_state TEXT,
+  p_shipping_pincode TEXT,
+  p_payment_method TEXT,
+  p_payment_reference TEXT,
+  p_items JSONB
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user_id UUID := auth.uid();
+  v_item JSONB;
+  v_product_id UUID;
+  v_product public.products%ROWTYPE;
+  v_quantity INTEGER;
+  v_subtotal NUMERIC(10, 2) := 0;
+  v_delivery_charge NUMERIC(10, 2);
+  v_order_id UUID;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required' USING ERRCODE = '42501';
+  END IF;
+
+  IF NULLIF(btrim(p_order_number), '') IS NULL
+    OR NULLIF(btrim(p_shipping_name), '') IS NULL
+    OR NULLIF(btrim(p_shipping_address), '') IS NULL
+    OR NULLIF(btrim(p_shipping_city), '') IS NULL
+    OR NULLIF(btrim(p_shipping_state), '') IS NULL
+    OR p_shipping_phone !~ '^[0-9]{10}$'
+    OR p_shipping_pincode !~ '^[0-9]{6}$' THEN
+    RAISE EXCEPTION 'Invalid shipping details' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_payment_method NOT IN ('UPI', 'COD') THEN
+    RAISE EXCEPTION 'Unsupported payment method' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_payment_method = 'UPI' AND NULLIF(btrim(p_payment_reference), '') IS NULL THEN
+    RAISE EXCEPTION 'UPI reference is required' USING ERRCODE = '22023';
+  END IF;
+
+  IF jsonb_typeof(p_items) IS DISTINCT FROM 'array' OR jsonb_array_length(p_items) = 0 THEN
+    RAISE EXCEPTION 'At least one order item is required' USING ERRCODE = '22023';
+  END IF;
+
+  FOR v_item IN
+    SELECT value FROM jsonb_array_elements(p_items) AS item(value)
+  LOOP
+    v_product_id := NULLIF(v_item->>'product_id', '')::UUID;
+    v_quantity := NULLIF(v_item->>'quantity', '')::INTEGER;
+
+    IF v_product_id IS NULL OR v_quantity IS NULL OR v_quantity < 1 OR v_quantity > 20 THEN
+      RAISE EXCEPTION 'Invalid order item' USING ERRCODE = '22023';
+    END IF;
+
+    SELECT p.* INTO v_product
+    FROM public.products AS p
+    WHERE p.id = v_product_id AND p.status = 'active';
+
+    IF NOT FOUND OR COALESCE(v_product.stock, 0) < v_quantity THEN
+      RAISE EXCEPTION 'Product unavailable or quantity exceeds stock' USING ERRCODE = '22023';
+    END IF;
+
+    v_subtotal := v_subtotal + v_product.price * v_quantity;
+  END LOOP;
+
+  v_delivery_charge := CASE WHEN v_subtotal >= 999 THEN 0 ELSE 79 END;
+
+  INSERT INTO public.orders (
+    order_number, user_id, subtotal, delivery_charge, discount_amount, total_amount,
+    status, payment_method, payment_status, payment_reference,
+    shipping_name, shipping_phone, shipping_address, shipping_city, shipping_state, shipping_pincode
+  ) VALUES (
+    btrim(p_order_number), v_user_id, v_subtotal, v_delivery_charge, 0, v_subtotal + v_delivery_charge,
+    'Pending', p_payment_method,
+    CASE WHEN p_payment_method = 'UPI' THEN 'Submitted for verification' ELSE 'Pay on delivery' END,
+    NULLIF(btrim(p_payment_reference), ''),
+    btrim(p_shipping_name), btrim(p_shipping_phone), btrim(p_shipping_address),
+    btrim(p_shipping_city), btrim(p_shipping_state), btrim(p_shipping_pincode)
+  ) RETURNING id INTO v_order_id;
+
+  FOR v_item IN
+    SELECT value FROM jsonb_array_elements(p_items) AS item(value)
+  LOOP
+    v_product_id := (v_item->>'product_id')::UUID;
+    v_quantity := (v_item->>'quantity')::INTEGER;
+
+    SELECT p.* INTO v_product
+    FROM public.products AS p
+    WHERE p.id = v_product_id AND p.status = 'active';
+
+    INSERT INTO public.order_items (
+      order_id, product_id, product_name, size, quantity, unit_price, total_price
+    ) VALUES (
+      v_order_id, v_product.id, v_product.name,
+      COALESCE(NULLIF(btrim(v_item->>'size'), ''), 'One Size'),
+      v_quantity, v_product.price, v_product.price * v_quantity
+    );
+  END LOOP;
+
+  RETURN v_order_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_customer_order(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_customer_order(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB) TO authenticated;
+REVOKE INSERT ON TABLE public.orders, public.order_items FROM PUBLIC, anon, authenticated;
 
 -- ==========================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -176,6 +297,7 @@ DROP POLICY IF EXISTS "Users insert own orders" ON public.orders;
 DROP POLICY IF EXISTS "Admins manage all orders" ON public.orders;
 DROP POLICY IF EXISTS "Users view own order items" ON public.order_items;
 DROP POLICY IF EXISTS "Users insert order items" ON public.order_items;
+DROP POLICY IF EXISTS "Users insert own order items" ON public.order_items;
 DROP POLICY IF EXISTS "Public Read Access" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Upload Access" ON storage.objects;
 DROP POLICY IF EXISTS "Admin Update Access" ON storage.objects;
@@ -215,7 +337,6 @@ CREATE POLICY "Users manage own addresses" ON public.addresses FOR ALL USING (au
 
 -- Orders Policies
 CREATE POLICY "Users view own orders" ON public.orders FOR SELECT USING (auth.uid() = user_id OR public.is_admin());
-CREATE POLICY "Users insert own orders" ON public.orders FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
 CREATE POLICY "Admins manage all orders" ON public.orders FOR ALL USING (public.is_admin());
 
 -- Order Items Policies
@@ -237,7 +358,7 @@ BEGIN
     new.id,
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
     new.email,
-    COALESCE((new.raw_user_meta_data->>'is_admin')::boolean, false)
+    false
   )
   ON CONFLICT (id) DO UPDATE
   SET name = EXCLUDED.name,

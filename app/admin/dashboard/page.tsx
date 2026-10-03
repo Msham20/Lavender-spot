@@ -3,25 +3,41 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/lib/store/cart-context';
+import { fetchAdminOrders } from '@/lib/admin/orders';
 import { Package, ShoppingBag, Users, IndianRupee, Clock, AlertTriangle, ArrowUpRight } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const { products } = useCart();
   const [orders, setOrders] = useState<any[]>([]);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const storedOrders = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
-      setOrders(storedOrders);
-    } catch (e) {
-      console.error(e);
-    }
+    let mounted = true;
+    const loadOrders = async () => {
+      try {
+        const storedOrders = await fetchAdminOrders();
+        if (mounted) {
+          setOrders(storedOrders);
+          setOrderError(null);
+        }
+      } catch (loadError) {
+        console.error('Unable to load dashboard orders:', loadError);
+        if (mounted) setOrderError('Order metrics could not be loaded from the database.');
+      }
+    };
+
+    loadOrders();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const totalProducts = products.length;
   const totalOrders = orders.length;
   const totalCustomers = new Set(orders.map((o) => o.customer?.email)).size || 1;
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const totalRevenue = orders
+    .filter((order) => order.paymentStatus === 'Verified')
+    .reduce((sum, order) => sum + (order.total || 0), 0);
   const pendingOrders = orders.filter((o) => !o.status || o.status === 'Pending').length;
   const lowStockProducts = products.filter((p) => p.stock < 15);
 
@@ -123,7 +139,9 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
 
-          {orders.length > 0 ? (
+          {orderError ? (
+            <p role="alert" className="text-xs text-rose-700 py-6 text-center">{orderError}</p>
+          ) : orders.length > 0 ? (
             <div className="divide-y divide-line text-xs">
               {orders.slice(0, 5).map((ord) => (
                 <div key={ord.id} className="py-3 flex justify-between items-center">
