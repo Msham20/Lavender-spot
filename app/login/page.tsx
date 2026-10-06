@@ -12,12 +12,40 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('authError') === 'confirmation') {
+    const authError = new URLSearchParams(window.location.search).get('authError');
+    if (authError === 'confirmation') {
       setError('That confirmation link is invalid or expired. Create a new account or request another confirmation email.');
+    } else if (authError === 'oauth') {
+      setError('Google sign-in could not be completed. Please try again.');
     }
   }, []);
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setGoogleLoading(true);
+
+    try {
+      const supabase = createClient();
+      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      const destination = redirect?.startsWith('/') && !redirect.startsWith('//') ? redirect : '/account';
+      const callbackUrl = new URL('/auth/callback', window.location.origin);
+      callbackUrl.searchParams.set('next', destination);
+      callbackUrl.searchParams.set('provider', 'google');
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: callbackUrl.toString() },
+      });
+
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Failed to start Google sign-in. Please try again.');
+      setGoogleLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +106,27 @@ export default function LoginPage() {
           </div>
         )}
 
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading || googleLoading}
+          className="w-full py-3 border border-line bg-white text-charcoal text-xs font-semibold rounded hover:bg-lavender-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-2.5"
+        >
+          <svg aria-hidden="true" viewBox="0 0 48 48" className="w-4 h-4">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z" />
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 38.02 46.98 31.81 46.98 24.55Z" />
+            <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z" />
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.88 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z" />
+          </svg>
+          {googleLoading ? 'Connecting to Google...' : 'Continue with Google'}
+        </button>
+
+        <div className="flex items-center gap-3 text-[10px] text-charcoal-muted">
+          <span className="h-px flex-1 bg-line" />
+          OR SIGN IN WITH EMAIL
+          <span className="h-px flex-1 bg-line" />
+        </div>
+
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-charcoal-soft block mb-1">Email Address</label>
@@ -116,7 +165,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || googleLoading}
             className="w-full py-3.5 bg-lavender-700 text-white text-xs font-semibold uppercase tracking-widest rounded hover:bg-lavender-800 transition-colors shadow"
           >
             {loading ? 'Signing In...' : 'Sign In'}

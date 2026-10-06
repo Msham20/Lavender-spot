@@ -36,7 +36,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = createClient();
       const [{ data: productRows, error: productError }, { data: categoryRows }] = await Promise.all([
-        supabase.from('products').select('*').order('created_at', { ascending: false }),
+        supabase.from('products').select('*').eq('status', 'active').order('created_at', { ascending: false }),
         supabase.from('categories').select('*'),
       ]);
 
