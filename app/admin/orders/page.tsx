@@ -42,17 +42,23 @@ export default function AdminOrdersPage() {
     if (!order?.databaseId) return;
 
     const supabase = createClient();
-    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', order.databaseId);
-    if (error) {
-      showToast('Could not update order status.');
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', order.databaseId)
+      .select('id, status')
+      .maybeSingle();
+    if (error || !data) {
+      console.error('Could not persist order status:', error || 'No order was updated.');
+      showToast('Could not update order status. Check database permissions and try again.');
       return;
     }
 
-    const updated = orders.map((item) => item.id === orderId ? { ...item, status: newStatus } : item);
+    const updated = orders.map((item) => item.id === orderId ? { ...item, status: data.status } : item);
     setOrders(updated);
-    showToast(`Order ${orderId} status updated to "${newStatus}"`);
+    showToast(`Order ${orderId} status updated to "${data.status}"`);
     if (activeModalOrder && activeModalOrder.id === orderId) {
-      setActiveModalOrder({ ...activeModalOrder, status: newStatus });
+      setActiveModalOrder({ ...activeModalOrder, status: data.status });
     }
   };
 

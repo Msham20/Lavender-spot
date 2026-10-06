@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/store/cart-context';
@@ -28,9 +28,55 @@ export default function CustomerAccountPage() {
   });
 
   const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const refreshOrdersRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     let isMounted = true;
+    let userId: string | null = null;
+    const supabase = createClient();
+
+    const loadOrders = async () => {
+      if (!userId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, order_number, subtotal, delivery_charge, total_amount, status, created_at, shipping_name, shipping_city, order_items(product_id, product_name, size, quantity, unit_price)')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (!isMounted) return;
+
+        setOrders((data || []).map((order) => ({
+          id: order.order_number,
+          total: Number(order.total_amount),
+          status: order.status || 'Pending',
+          created_at: order.created_at,
+          customer: {
+            name: order.shipping_name,
+            city: order.shipping_city,
+          },
+          items: (order.order_items || []).map((item) => ({
+            product_id: item.product_id,
+            size: item.size,
+            quantity: item.quantity,
+            product: {
+              name: item.product_name,
+              price: Number(item.unit_price),
+            },
+          })),
+        })));
+        setOrdersError(null);
+      } catch (error) {
+        console.error('Failed to load customer orders:', error);
+        if (isMounted) setOrdersError('Your orders could not be refreshed. Please try again.');
+      } finally {
+        if (isMounted) setOrdersLoading(false);
+      }
+    };
 
     try {
       const storedUser = localStorage.getItem('lavender_spot_user_session');
@@ -42,37 +88,54 @@ export default function CustomerAccountPage() {
           email: parsed.email || prev.email,
         }));
       }
-
-      const storedOrders = JSON.parse(localStorage.getItem('lavender_spot_user_orders') || '[]');
-      setOrders(storedOrders);
     } catch (e) {
-      console.error(e);
+      console.error('Failed to load cached customer profile:', e);
     }
 
-    const syncSignedInUser = async () => {
+    const initializeAccount = async () => {
       try {
-        const supabase = createClient();
         const { data: { user }, error } = await supabase.auth.getUser();
 
         if (error) throw error;
-        if (!user || !isMounted) return;
+        if (!user) {
+          if (isMounted) {
+            setOrders([]);
+            setOrdersError('Sign in to view your orders.');
+          }
+          return;
+        }
+        if (!isMounted) return;
 
         const userProfile = {
           email: user.email || '',
           name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Customer',
           is_admin: false,
         };
+        userId = user.id;
         localStorage.setItem('lavender_spot_user_session', JSON.stringify(userProfile));
         setUserProfile((prev) => ({ ...prev, ...userProfile }));
+        await loadOrders();
       } catch (error) {
         console.error('Failed to load signed-in user profile:', error);
+        if (isMounted) setOrdersError('Your account details could not be loaded. Please refresh the page.');
+      } finally {
+        if (isMounted) setOrdersLoading(false);
       }
     };
 
-    syncSignedInUser();
+    void initializeAccount();
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') void loadOrders();
+    };
+    refreshOrdersRef.current = () => void loadOrders();
+    const refreshInterval = window.setInterval(refreshOnFocus, 15000);
+    window.addEventListener('focus', refreshOnFocus);
 
     return () => {
       isMounted = false;
+      refreshOrdersRef.current = () => {};
+      window.clearInterval(refreshInterval);
+      window.removeEventListener('focus', refreshOnFocus);
     };
   }, []);
 
@@ -142,9 +205,23 @@ export default function CustomerAccountPage() {
           {/* ORDERS TAB */}
           {activeTab === 'orders' && (
             <div className="space-y-5">
-              <h2 className="text-xl font-serif text-charcoal">Your orders</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-serif text-charcoal">Your orders</h2>
+                <button
+                  type="button"
+                  onClick={() => refreshOrdersRef.current()}
+                  disabled={ordersLoading}
+                  className="text-xs font-semibold text-lavender-800 hover:underline disabled:opacity-50"
+                >
+                  Refresh status
+                </button>
+              </div>
 
-              {orders.length > 0 ? (
+              {ordersError && <p role="alert" className="text-xs text-rose-700">{ordersError}</p>}
+
+              {ordersLoading ? (
+                <p className="py-10 text-center text-xs text-charcoal-muted">Loading your orders...</p>
+              ) : orders.length > 0 ? (
                 <div className="space-y-3">
                   {orders.map((ord) => (
                     <section key={ord.id} className="rounded border border-line p-4 text-xs">
@@ -161,7 +238,7 @@ export default function CustomerAccountPage() {
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-charcoal">₹{ord.total}</p>
-                          <p className="mt-1 text-charcoal-muted">{ord.status || 'Confirmed'}</p>
+                          <p className="mt-1 text-charcoal-muted">{ord.status || 'Pending'}</p>
                         </div>
                       </div>
                       <div className="divide-y divide-line">
